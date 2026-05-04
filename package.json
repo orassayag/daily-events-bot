@@ -1,0 +1,100 @@
+{
+  "name": "daily-events-bot",
+  "version": "1.0.0",
+  "description": "Automated scheduler script that compiles your daily tasks, holidays, birthdays, anniversaries, memorial dates, service expirations, and routine activities, then sends them via a Telegram bot to a chat, triggering mobile notifications that help you stay organized, consistent, and always on track.",
+  "type": "module",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/orassayag/daily-events-bot.git"
+  },
+  "keywords": [
+    "automation",
+    "scheduler",
+    "reminders",
+    "telegram-bot",
+    "notifications",
+    "cron",
+    "daily-tasks",
+    "productivity",
+    "task-management",
+    "event-reminders",
+    "birthdays",
+    "anniversaries",
+    "routines",
+    "alerts",
+    "nodejs",
+    "cli-tool",
+    "scheduling",
+    "personal-assistant",
+    "workflow",
+    "time-management"
+  ],
+  "main": "dist/index.js",
+  "scripts": {
+    "lint": "eslint \"src/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "start": "tsx src/index.ts",
+    "start:live": "cross-env DRY_MODE=false tsx src/index.ts",
+    "start:no-cache": "tsx src/index.ts --no-cache",
+    "sync": "tsx src/index.ts --auto",
+    "dev": "tsx watch src/index.ts",
+    "test": "cross-env NODE_OPTIONS='--no-warnings' vitest run --coverage",
+    "test:watch": "cross-env NODE_OPTIONS='--no-warnings' vitest",
+    "test:no-coverage": "cross-env NODE_OPTIONS='--no-warnings' vitest run",
+    "test:ui": "vitest --ui",
+    "build": "tsc"
+  },
+  "author": "Or Assayag <orassayag@gmail.com>",
+  "contributors": [
+    {
+      "name": "Or Assayag",
+      "email": "orassayag@gmail.com",
+      "url": "https://github.com/orassayag"
+    }
+  ],
+  "files": [
+    ".vscode",
+    "dist",
+    "src",
+    ".gitignore",
+    ".prettierrc",
+    "eslint.config.mjs",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "INSTRUCTIONS.md",
+    "CHANGELOG.md",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "README.md",
+    "tsconfig.json",
+    "vitest.config.ts"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ""
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@rolldown/binding-win32-x64-msvc": "^1.0.0-rc.18",
+    "@types/node": "^25.6.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.1",
+    "@typescript-eslint/parser": "^8.59.1",
+    "@vitest/coverage-istanbul": "^4.1.5",
+    "@vitest/ui": "^4.1.5",
+    "cross-env": "^10.1.0",
+    "eslint": "^10.3.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "prettier": "^3.8.3",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.1",
+    "vitest": "^4.1.5"
+  }
+}
