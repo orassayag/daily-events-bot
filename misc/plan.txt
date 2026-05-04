@@ -1,0 +1,140 @@
+daily-events-bot
+
+Plan:
+1. Validate the existence of the .env file and the values are filled for BOT_USERNAME, TOKEN, CHAT_ID. If any or them or all of them not exists - Throw an error.
+2. Add validation that if the chat title is not equal to the chat username from the env file - Throw an error. 
+3. From the chat id, take the 5 latest messages. It will be described later what we will do with them.
+3.1. If failed to fetch the messages - Throw an error.
+4. Validation step - Check in the last 5 messages that a message which the first line of it contains the date of today (Jerusalem time) in the format of dd/MM/yyyy.
+4.1. For example, if detect: "04/05/2026 שני." that means that the message was found and it's included in the last 5 messages.
+4.2. Formats of yyyy/mm/dd or mm/dd/yyyy are not valid so 05/04/2026 not valid and means that not included.
+4.3. if the message found and included, - Throw an error.
+5. Go to the path of C:\Users\Or Assayag\Dropbox\or-life\documents\daily (will be configured from a settings.ts file).
+5.1. If this folder not found - Throw an error.
+6. On this path search a txt file which start with the pattern of "event-dates-#CURRENT-YEAR#.txt" (For example, "event-dates-2026.txt")
+6.1. If no file was found - Throw an error.
+6.2. If more than 1 file was found - Throw an error.
+7. At this point, we would open and read the file (read all the file - add to array of strings - and close the steam - within async await operation)
+8. Search the date of today (Jerusalem time) with the format of "dd/MM/yyyy #HEBREW DAY#." (For example: 04/05/2026 שני.)
+8.1. If not found - Throw an error.
+8.2. If found more than 1 match - Throw an error.
+9. Once found, take all the lines until the closest "================" (not included empty break lines) (Also, don't need to be equal to "================" exactly, can be at least 3 chars of "#".
+10. Once got all the strings of the day, send them to the chat id via the bot, see example:
+
+async function sendBotMessage(text: string): Promise<void> {
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+    })
+  });
+}
+
+10.1. If failed to send the message - Show the error message.
+11. This script will be activated by a bat file from outside - Copy the logic for this from the project: C:\Or\web\projects\repos-maintainer and the bat file: C:\Users\Or Assayag\Desktop\reposScanReporter.bat
+12. You can see example of the events-dates-2026 file here: C:\Users\Or Assayag\Dropbox\or-life\documents\daily\event-dates-2026.txt - IMPORTANT - YOU NEVER EVER WRITE TO THIS FILE, ONLY READ FROM IT.
+
+===================
+
+package.json description:  (120-300 characters)
+
+Automated scheduler script that compiles your daily tasks, holidays, birthdays, anniversaries, memorial dates, service expirations, and routine activities, then sends them via a Telegram bot to a chat, triggering mobile notifications that help you stay organized, consistent, and always on track.
+
+GitHub description:
+
+Automated scheduler script that compiles your daily tasks, birthdays, anniversaries, memorial dates, and routine activities, then sends them via a Telegram bot to a designated chat, triggering mobile notifications.
+
+Build in May 2026, this project showcases practical automation with Telegram integration, ensuring key tasks and events are never missed
+
+keywords:
+
+automation, scheduler, reminders, telegram-bot, notifications, cron, daily-tasks, productivity, task-management, event-reminders, birthdays, anniversaries, routines, alerts, nodejs, cli-tool, scheduling, personal-assistant, workflow, time-management
+
+
+A new project - A new script which will run automatically
+daily each 07:00 in the morning and write to a telegram bot the tasks i have to do today, birthday, marriage, memorial reminder, expiration of services reminders, and routine tasks to be done. The bot will write it to a specific chat which will popup a notification in the mobile cellular phone as a reminder.
+
+It will scan the "daily" folder - it will search for the events date document.
+-It will fetch the relevant day and will send it to me in telegram - Add it to task scheduler.
+See:
+
+Yes — Telegram is actually a much better fit for what you want. You can send yourself a message 100% free, forever, and it’s easier than SMS once set up.
+
+✅ Best approach: Telegram Bot → message to yourself
+
+You don’t send to your phone number directly — instead, you send to your Telegram user (chat ID).
+
+How it works
+Create a bot via Telegram’s bot system using BotFather
+Get your bot token
+Send a message from your bot → to your own chat
+⚙️ Setup (takes ~2 minutes)
+1. Create a bot
+Open Telegram
+Search for @BotFather
+
+OrAssayagDailyEventsBot
+OrAssayagDailyEventsBot
+8781559619
+
+Done! Congratulations on your new bot. You will find it at t.me/OrAssayagDailyEventsBot. You can now add a description, about section and profile picture for your bot, see /help for a list of commands. By the way, when you've finished creating your cool bot, ping our Bot Support if you want a better username for it. Just make sure the bot is fully operational before you do this.
+
+For a description of the Bot API, see this page: https://core.telegram.org/bots/api
+
+Run:
+
+/start
+/newbot
+Copy the bot token
+2. Get your chat ID
+Open this URL in browser:
+https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates
+Send a message to your bot first (like “hi”)
+Then refresh → you’ll see something like:
+"chat": {
+  "id": 123456789
+}
+
+👉 That number = your chat_id
+
+3. Send yourself a message (example)
+Node.js (pnpm-friendly)
+import fetch from "node-fetch";
+
+const token = process.env.TELEGRAM_BOT_TOKEN;
+const chatId = process.env.TELEGRAM_CHAT_ID;
+
+async function sendMessage() {
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: "Daily reminder 🚀"
+    })
+  });
+}
+
+sendMessage();
+⏰ Automate daily
+
+Just run it with:
+
+cron (Linux/macOS)
+Task Scheduler (Windows)
+or a CI job (GitHub Actions)
+👍 Why this is better than SMS
+✅ Completely free
+✅ No limits (for your use case)
+✅ No carrier issues
+✅ Works worldwide
+✅ Easy to automate
+⚠️ Small gotcha
+You must start a chat with your bot first, otherwise it can’t message you.
+
+If you want, I can:
+
+turn this into a ready cron setup
+or integrate it into your existing Node project structure (since you’re using pnpm)

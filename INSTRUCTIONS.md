@@ -2,321 +2,224 @@
 
 ## Setup Instructions
 
-1. Open the project in your IDE (VSCode recommended)
-2. Install dependencies:
+1. Open the project in your IDE (VSCode recommended).
+2. Install dependencies using pnpm:
    ```bash
-   npm install
+   pnpm install
    ```
-3. Ensure MongoDB is installed and running locally on `mongodb://localhost:27017/`
+3. Configure your environment variables in a `.env` file (see [Prerequisites](#prerequisites)).
+4. Prepare your event data files in the designated folder.
 
 ## Prerequisites
 
-- Node.js (v14 or higher)
-- MongoDB (v4 or higher)
-- Internet connection (for production mode)
+- **Node.js**: Version 18 or higher.
+- **pnpm**: Recommended package manager.
+- **Telegram Bot**: A bot token from [@BotFather](https://t.me/botfather).
+- **Chat ID**: The ID of the Telegram chat or channel where notifications will be sent.
+- **Environment Variables**:
+  - `TOKEN`: Your Telegram Bot API token.
+  - `CHAT_ID`: Your target chat ID.
+  - `BOT_USERNAME`: Your bot's username.
+  - `TARGET_USERNAME`: The title/username of the target chat for validation.
 
 ## Configuration
 
 ### Main Settings
 
-Open `src/settings/settings.js` and configure according to your needs:
+Configuration is managed via `src/settings/settings.ts` and the `.env` file.
 
 #### Production vs Development Mode
 
-- `IS_PRODUCTION_MODE`: Set to `true` for real crawling with Puppeteer, `false` for testing with local sources
-- **Important**: Run `npm run preload` after changing this setting to install/remove Puppeteer package
+- **Production**: Run with `pnpm start` or `pnpm start:live`.
+- **Development**: Use `pnpm dev` for hot-reloading during development.
+- The bot performs validation on every run to ensure it doesn't send duplicate messages for the same day.
 
 #### Goal Settings
 
-- `GOAL_TYPE`: Choose from `EMAIL_ADDRESSES`, `MINUTES`, or `LINKS`
-- `GOAL_VALUE`: Set the target value (e.g., 1000 email addresses, 700 minutes, 500 links)
+- The primary goal of this bot is to send exactly one notification per day.
+- Success is tracked in `db/days.json`.
 
 #### Method Settings
 
-- `IS_LINKS_METHOD_ACTIVE`: Enable/disable link crawling from search engines
-- `IS_CRAWL_METHOD_ACTIVE`: Enable/disable email address extraction from pages
+- **Telegram API**: Uses standard POST requests to `sendMessage`.
+- **File System**: Reads yearly event files (e.g., `event-dates-2026.txt`).
 
 #### MongoDB Settings
 
-- `IS_DROP_COLLECTION`: Set to `true` to clear the database before starting (use for testing)
-- `MONGO_DATABASE_NAME`: Database name (default: `crawl`)
-- `MONGO_DATABASE_COLLECTION_NAME`: Collection name (default: `emailaddresses`)
+- This project **does not use MongoDB**.
+- Persistence is handled via a local JSON file located at `db/days.json`.
+- This ensures the bot is lightweight and has zero external database dependencies.
 
 #### Search Settings
 
-- `SEARCH_KEY`: Set a static search term, or leave as `null` for random search keys
-- `IS_ADVANCE_SEARCH_KEYS`: Use advanced Hebrew search keys (`true`) or basic static keys (`false`)
+- **File Search**: The bot searches for today's date in a local text file.
+- **Timezone**: Date calculations are pinned to Jerusalem time (`Asia/Jerusalem`).
 
 #### Process Limits
 
-- `MAXIMUM_SEARCH_PROCESSES_COUNT`: Number of processes to run (default: 10000 for long runs)
-- `MAXIMUM_SEARCH_ENGINE_PAGES_PER_PROCESS_COUNT`: Pages to crawl per process (default: 1)
-- `MAXIMUM_MINUTES_WITHOUT_UPDATE`: Restart if no progress for X minutes (default: 20)
+- The bot is designed to be run once per day (e.g., via a cron job).
+- It executes the full flow (Validate -> Fetch -> Send -> Record) and then exits.
 
 #### Logging Options
 
-- `IS_LOG_VALID_EMAIL_ADDRESSES`: Log valid emails to TXT file
-- `IS_LOG_FIX_EMAIL_ADDRESSES`: Log fixed emails to TXT file
-- `IS_LOG_INVALID_EMAIL_ADDRESSES`: Log invalid emails to TXT file
-- `IS_LOG_CRAWL_LINKS`: Log crawled links to TXT file
+- Execution progress is logged directly to the console.
+- Errors are caught and displayed with descriptive messages before the process exits with code 1.
 
 ### Search Engines Configuration
 
-Edit `src/configurations/files/searchEngines.configuration.js`:
-
-- Configure active search engines (Bing, Google)
-- Set URL patterns and query parameters
-- Enable/disable specific engines
+- This project **does not use search engines**.
+- Instead, it relies on a local directory of text files containing scheduled events.
 
 ### Search Keys Configuration
 
-Edit `src/configurations/files/searchKeys.configuration.js`:
-
-- `basicSearchKeys`: Static search terms
-- `advanceSearchKeys`: Dynamic Hebrew search key generation rules
+- Events are identified by a date string at the beginning of a line.
+- Expected format: `DD/MM/YYYY Weekday.` (e.g., `04/05/2026 Monday.`).
 
 ### Filter Configurations
 
 #### Email Address Filters
 
-Edit `src/configurations/files/filterEmailAddress.configuration.js`:
-
-- `filterEmailAddressDomains`: Domain parts to filter out
-- `filterEmailAddresses`: Specific email addresses to exclude
+- **N/A**: This bot does not process email addresses.
 
 #### Link Filters
 
-Edit `src/configurations/files/filterLinkDomains.configuration.js`:
-
-- `globalFilterLinkDomains`: Domains to filter from all search engines
-- `filterLinkDomains`: Search engine-specific domain filters
+- **N/A**: This bot does not crawl web links.
 
 #### File Extension Filters
 
-Edit `src/configurations/files/filterFileExtensions.configuration.js`:
-
-- `filterLinkFileExtensions`: File extensions to skip when crawling (e.g., `.pdf`, `.jpg`)
+- The bot specifically looks for `.txt` files named `event-dates-YYYY.txt`.
 
 ### Email Domain Configurations
 
-Edit `src/configurations/files/emailAddressDomainsList.configuration.js`:
-
-- List of common email domains (Gmail, Hotmail, etc.)
-- Typo correction mappings
-- Domain validation rules
+- **N/A**: No email domain processing is performed.
 
 ## Running Scripts
 
 ### Main Crawler (with Monitor)
 
-Starts the crawler with automatic restart on failure:
-
+To run the bot in its standard mode:
 ```bash
-npm start
+pnpm start
 ```
-
-This launches the monitor which:
-
-- Shows confirmation screen with current settings
-- Automatically restarts on errors/timeout
-- Tracks progress and statistics
-- Logs all data to `dist/production/` or `dist/development/`
+This will:
+1. Initialize the DI container.
+2. Check if today's date is already in `db/days.json`.
+3. Validate Telegram credentials.
+4. Fetch and send today's events.
 
 ### Backup
 
-Creates a backup of the project:
-
-```bash
-npm run backup
-```
+You can manually back up your `db/days.json` and event files to a secure location.
 
 ### Domain Counter
 
-Counts email address domains from files or MongoDB:
-
-```bash
-npm run domains
-```
+- **N/A**: Domain counting is not applicable to this project.
 
 ### Tests
 
+The project uses **Vitest** for testing.
+
 #### Validate Single Email
 
-Tests email validation logic:
-
-```bash
-npm run val
-```
+- **N/A**: Use `pnpm test` to run available unit tests for `TelegramService` and `EventFileService`.
 
 #### Validate Multiple Emails
 
-Validates a batch of email addresses:
-
-```bash
-npm run valmany
-```
+- **N/A**.
 
 #### Debug Email Validation
 
-Runs validation with Node.js inspector:
-
-```bash
-npm run valdebug
-```
+- **N/A**.
 
 #### Test Typos
 
-Tests email typo detection and correction:
-
-```bash
-npm run typos
-```
+- **N/A**.
 
 #### Test Link Crawling
 
-Tests crawling links from a specific page:
-
-```bash
-npm run link
-```
+- **N/A**.
 
 #### Test Session Links
 
-Tests crawling multiple predefined links:
-
-```bash
-npm run session
-```
+- **N/A**.
 
 #### Email Generator Test
 
-Tests random email address generation:
-
-```bash
-npm run generator
-```
+- **N/A**.
 
 #### Test Cases
 
-Runs comprehensive email validation test cases:
-
-```bash
-npm run cases
-```
+- Run `pnpm test` to execute all test cases in the `src/__tests__` directory.
 
 #### Sandbox
 
-General testing sandbox:
-
-```bash
-npm run sand
-```
+- You can use `src/index.ts` or create a temporary script to test specific service integrations.
 
 ## Quick Start Guide
 
 ### For Testing (Development Mode)
 
-1. Open `src/settings/settings.js`
-2. Set `IS_PRODUCTION_MODE: false`
-3. Set `GOAL_TYPE: GoalTypeEnum.EMAIL_ADDRESSES`
-4. Set `GOAL_VALUE: 10`
-5. Set `IS_LONG_RUN: false`
-6. Run: `npm start`
+1. Set up `.env` with test credentials.
+2. Run `pnpm dev`.
+3. The bot will reload automatically as you make changes.
 
 ### For Production Crawling
 
-1. Open `src/settings/settings.js`
-2. Set `IS_PRODUCTION_MODE: true`
-3. Run: `npm run preload` (installs Puppeteer)
-4. Configure search engines in `searchEngines.configuration.js`
-5. Configure search keys in `searchKeys.configuration.js`
-6. Configure filters as needed
-7. Ensure MongoDB is running
-8. Run: `npm start`
-9. Confirm settings when prompted (type `y`)
+1. Ensure `db/days.json` is initialized (or it will be created automatically).
+2. Schedule the `pnpm start` command using Task Scheduler (Windows) or Cron (Linux).
+3. Ensure the `dailyFolderPath` in `settings.ts` points to your actual event files.
 
 ## File Structure
 
-### Source Files (`src/`)
+### Source Files (src/)
 
-- `monitor/monitor.js` - Main entry point with restart monitoring
-- `scripts/crawl.script.js` - Crawling script logic
-- `logics/crawl.logic.js` - Core crawling orchestration
-- `services/` - Business logic services
-- `configurations/` - Configuration files
-- `settings/settings.js` - Main settings file
-- `utils/` - Utility functions
-- `core/` - Models and enums
+- `bot.ts`: Main logic orchestration.
+- `services/`: Implementation of Telegram, File, and Database logic.
+- `di/`: Dependency injection setup using Inversify.
+- `utils/`: Date formatting and localization utilities.
+- `settings/`: Static configuration and file paths.
 
-### Output Files (`dist/`)
+### Output Files (dist/)
 
-Generated files are placed in `dist/production/` or `dist/development/` with date-based subdirectories:
-
-- `valid_email_addresses.txt` - Valid emails found
-- `fix_email_addresses.txt` - Emails that were corrected
-- `invalid_email_addresses.txt` - Invalid emails
-- `crawl_links.txt` - Links crawled
-- `crawl_error_links.txt` - Links that failed
+- Compiled JavaScript files are placed in the `dist/` folder when running `pnpm build`.
 
 ## Understanding the Console Status Line
 
-When running, you'll see a real-time status line with:
-
-```
-===[SETTINGS] Mode: PRODUCTION | Plan: STANDARD | Database: crawl | Drop: false | Long: true | Active Methods: LINKS,CRAWL===
-===[GENERAL] Time: 00.00:00:12 [\] | Goal: MINUTES | Progress: 0/700 (00.00%) | Status: CRAWL | Restarts: 0===
-===[PROCESS] Process: 1/10,000 | Page: 1/1 | Engine: Bing | Key: search term===
-===[LINK] Crawl: ✅  13 | Total: 40 | Filter: 27 | Error: 0 | Error In A Row: 0 | Current: 2/13===
-===[EMAIL ADDRESS] Save: ✅  0 | Total: 2 | Database: 15,915 | Exists: 1 | Invalid: ❌  0 | Valid Fix: 0 | Invalid Fix: 0 | Unsave: 0 | Filter: 0 | Skip: 0 | Gibberish: 0===
-```
-
-- **SETTINGS**: Current mode and configuration
-- **GENERAL**: Runtime, goal progress, current status
-- **PROCESS**: Process number, page number, search engine, search key
-- **LINK**: Link crawling statistics
-- **EMAIL ADDRESS**: Email collection statistics
+The bot provides clear step-by-step logs:
+- `1. Checking if message for today already sent`
+- `2. Validating bot and chat`
+- `3. Fetching events from file`
+- `4. Sending message`
+- `5. Marking date as sent`
 
 ## Troubleshooting
 
 ### Application Won't Start
 
-- Ensure MongoDB is running: `mongod`
-- Check Node version: `node --version` (should be v14+)
-- Delete `node_modules` and run `npm install` again
+- Check if `node_modules` are installed: `pnpm install`.
+- Verify `.env` file exists and contains all required keys.
 
 ### No Email Addresses Being Found
 
-- Check if search engines changed their HTML structure
-- Verify internet connection
-- Check filter configurations (might be too aggressive)
-- Examine `dist/.../crawl_error_links.txt` for errors
+- **N/A**: Ensure your `event-dates-YYYY.txt` file contains a line starting with today's date in the correct format.
 
 ### Puppeteer Errors
 
-- Ensure Chromium dependencies are installed (Linux)
-- Try running with `IS_PRODUCTION_MODE: false` first
-- Check for antivirus interference
+- **N/A**: This bot uses the Telegram Bot API via `fetch`, not Puppeteer.
 
 ### MongoDB Connection Errors
 
-- Verify MongoDB is running: `mongo` command should work
-- Check connection string in settings
-- Ensure MongoDB port 27017 is not blocked
+- **N/A**: The bot uses a local JSON file. Ensure the application has write permissions to the `db/` directory.
 
 ### Application Keeps Restarting
 
-- Check `MAXIMUM_MINUTES_WITHOUT_UPDATE` setting
-- Increase timeout values if network is slow
-- Review error logs in dist directory
+- If running in watch mode (`pnpm dev`), check for syntax errors in your code.
 
 ## Important Notes
 
-- Always run `npm run preload` when switching between production and development modes
-- The application automatically restarts on errors (up to 50 times)
-- All email addresses are validated and can be auto-corrected for common typos
-- Gibberish detection is enabled by default to filter out invalid data
-- Links are filtered to avoid duplicates and unwanted domains
-- Downloads folder is automatically cleaned between processes
+- **Separators**: Use `===` or `###` in your event files to mark the end of a day's events.
+- **Jerusalem Time**: The bot uses Jerusalem time regardless of the server's local time.
+- **One-time Send**: Once a date is marked in `db/days.json`, the bot will not send it again unless the entry is manually removed.
 
 ## Author
 
