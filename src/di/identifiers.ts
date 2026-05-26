@@ -3,4 +3,5 @@ export const TYPES = {
   EventFileService: Symbol.for('EventFileService'),
   DatabaseService: Symbol.for('DatabaseService'),
   DailyEventsBot: Symbol.for('DailyEventsBot'),
+  Logger: Symbol.for('Logger'),
 };

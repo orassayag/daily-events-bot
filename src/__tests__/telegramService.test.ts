@@ -6,9 +6,17 @@ describe('TelegramService', () => {
   let service: TelegramService;
   const token = 'test-token';
   const chatId = 'test-chat-id';
+  let logger: any;
 
   beforeEach(() => {
-    service = new TelegramService();
+    logger = {
+      setContext: vi.fn(),
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    service = new TelegramService(logger);
     service.init(token, chatId);
     vi.stubGlobal('fetch', vi.fn());
   });
@@ -69,7 +77,6 @@ describe('TelegramService', () => {
     );
   });
 
-
   it('should send message successfully', async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
@@ -82,33 +89,39 @@ describe('TelegramService', () => {
       expect.stringContaining('sendMessage'),
       expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining('test message')
-      })
+        body: expect.stringContaining('test message'),
+      }),
     );
   });
 
   it('should throw error when getMe fails', async () => {
     vi.mocked(fetch).mockResolvedValue({
-      json: () => Promise.resolve({ ok: false, description: 'API Error' })
+      json: () => Promise.resolve({ ok: false, description: 'API Error' }),
     } as any);
 
-    await expect(service.validateBot('test-bot')).rejects.toThrow('Failed to get bot info: API Error');
+    await expect(service.validateBot('test-bot')).rejects.toThrow(
+      'Failed to get bot info: API Error',
+    );
   });
 
   it('should throw error when getChat fails', async () => {
     vi.mocked(fetch).mockResolvedValue({
-      json: () => Promise.resolve({ ok: false, description: 'API Error' })
+      json: () => Promise.resolve({ ok: false, description: 'API Error' }),
     } as any);
 
-    await expect(service.validateChat('test-user')).rejects.toThrow('Failed to get chat info: API Error');
+    await expect(service.validateChat('test-user')).rejects.toThrow(
+      'Failed to get chat info: API Error',
+    );
   });
 
   it('should throw error when sendMessage fails', async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
-      json: () => Promise.resolve({ ok: false, description: 'Send Error' })
+      json: () => Promise.resolve({ ok: false, description: 'Send Error' }),
     } as any);
 
-    await expect(service.sendMessage('test message')).rejects.toThrow('Failed to send message: Send Error');
+    await expect(service.sendMessage('test message')).rejects.toThrow(
+      'Failed to send message: Send Error',
+    );
   });
 });

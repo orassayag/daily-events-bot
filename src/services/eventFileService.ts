@@ -1,14 +1,24 @@
-import { injectable } from 'inversify';
+import { injectable, inject } from 'inversify';
 import fs from 'fs/promises';
 import path from 'path';
 import { DateInfo } from '../types/index.js';
+import { TYPES } from '../di/identifiers.js';
+import { Logger } from '../logging/index.js';
+import { EMOJIS } from '../constants/emojis.js';
 
 @injectable()
 export class EventFileService {
   private folderPath: string = '';
 
+  constructor(@inject(TYPES.Logger) private logger: Logger) {
+    this.logger.setContext('EventFileService');
+  }
+
   public init(folderPath: string): void {
     this.folderPath = folderPath;
+    this.logger.debug('EventFileService initialized', {
+      folderPath: this.folderPath,
+    });
   }
 
   /**
@@ -16,28 +26,39 @@ export class EventFileService {
    */
   public async getEventsForToday(dateInfo: DateInfo): Promise<string> {
     const { fullDateWithDay, year } = dateInfo;
+    this.logger.debug(`Fetching events for: ${fullDateWithDay}`);
 
     // 5.1 Check folder existence
     try {
       await fs.access(this.folderPath);
     } catch {
-      throw new Error(`Folder not found: ${this.folderPath}`);
+      const error = new Error(`Folder not found: ${this.folderPath}`);
+      this.logger.error('Events folder access failed', error);
+      throw error;
     }
 
     // 6. Search for the file
+    this.logger.debug(`Searching for events file in: ${this.folderPath}`);
     const files = await fs.readdir(this.folderPath);
     const pattern = `event-dates-${year}.txt`;
     const matchingFiles = files.filter((f) => f === pattern);
 
     if (matchingFiles.length === 0) {
-      throw new Error(`No file found matching pattern: ${pattern}`);
+      const error = new Error(`No file found matching pattern: ${pattern}`);
+      this.logger.error('Events file not found', error);
+      throw error;
     }
     if (matchingFiles.length > 1) {
-      throw new Error(`More than one file found matching pattern: ${pattern}`);
+      const error = new Error(
+        `More than one file found matching pattern: ${pattern}`,
+      );
+      this.logger.error('Multiple event files found', error);
+      throw error;
     }
 
     // 7. Read the file
     const filePath = path.join(this.folderPath, matchingFiles[0]);
+    this.logger.debug(`Reading events from: ${filePath}`);
     const content = await fs.readFile(filePath, 'utf-8');
     const lines = content.split(/\r?\n/);
 
@@ -46,19 +67,24 @@ export class EventFileService {
       line.trim().startsWith(fullDateWithDay),
     );
     if (startIndex === -1) {
-      throw new Error(`Date "${fullDateWithDay}" not found in file.`);
+      const error = new Error(`Date "${fullDateWithDay}" not found in file.`);
+      this.logger.error('Date not found in events file', error);
+      throw error;
     }
 
     const allMatches = lines.filter((line) =>
       line.trim().startsWith(fullDateWithDay),
     );
     if (allMatches.length > 1) {
-      throw new Error(
+      const error = new Error(
         `Found more than 1 match for "${fullDateWithDay}" in file.`,
       );
+      this.logger.error('Ambiguous date in events file', error);
+      throw error;
     }
 
     // 9. Extract lines until the separator
+    this.logger.debug('Extracting event lines');
     const resultLines: string[] = [];
     resultLines.push(lines[startIndex]);
 
@@ -82,6 +108,9 @@ export class EventFileService {
       resultLines.pop();
     }
 
+    this.logger.info(
+      `${EMOJIS.DATA.FILE} Successfully extracted ${resultLines.length} lines of events`,
+    );
     return resultLines.join('\n');
   }
 }

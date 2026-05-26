@@ -8,9 +8,17 @@ vi.mock('fs/promises');
 describe('EventFileService', () => {
   let service: EventFileService;
   const folderPath = 'test-folder';
+  let logger: any;
 
   beforeEach(() => {
-    service = new EventFileService();
+    logger = {
+      setContext: vi.fn(),
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    service = new EventFileService(logger);
     service.init(folderPath);
     vi.clearAllMocks();
   });

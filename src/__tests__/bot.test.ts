@@ -10,10 +10,19 @@ describe('DailyEventsBot', () => {
   let telegramService: TelegramService;
   let eventFileService: EventFileService;
   let databaseService: DatabaseService;
+  let logger: any;
 
   beforeEach(() => {
     // We can get instances from the container or create new ones
     // For unit testing the bot, we should mock its dependencies
+    logger = {
+      setContext: vi.fn(),
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+
     telegramService = {
       init: vi.fn(),
       validateBot: vi.fn(),
@@ -41,6 +50,7 @@ describe('DailyEventsBot', () => {
       telegramService,
       eventFileService,
       databaseService,
+      logger,
     );
   });
 
@@ -79,7 +89,12 @@ describe('DailyEventsBot', () => {
 
     // Re-instantiate bot to trigger validateEnv
     try {
-      new DailyEventsBot(telegramService, eventFileService, databaseService);
+      new DailyEventsBot(
+        telegramService,
+        eventFileService,
+        databaseService,
+        logger,
+      );
     } catch {
       // Expected
     }

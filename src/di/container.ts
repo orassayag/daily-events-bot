@@ -5,9 +5,11 @@ import { TelegramService } from '../services/telegramService.js';
 import { EventFileService } from '../services/eventFileService.js';
 import { DatabaseService } from '../services/databaseService.js';
 import { DailyEventsBot } from '../bot.js';
+import { Logger } from '../logging/index.js';
 
 const container = new Container();
 
+container.bind<Logger>(TYPES.Logger).to(Logger).inSingletonScope();
 container
   .bind<TelegramService>(TYPES.TelegramService)
   .to(TelegramService)
