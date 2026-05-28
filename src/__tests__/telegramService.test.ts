@@ -28,7 +28,7 @@ describe('TelegramService', () => {
     };
 
     vi.mocked(fetch).mockResolvedValue({
-      json: () => Promise.resolve(mockResponse),
+      json: (): Promise<any> => Promise.resolve(mockResponse),
     } as any);
 
     await expect(service.validateChat('test-user')).resolves.not.toThrow();
@@ -41,7 +41,7 @@ describe('TelegramService', () => {
     };
 
     vi.mocked(fetch).mockResolvedValue({
-      json: () => Promise.resolve(mockResponse),
+      json: (): Promise<any> => Promise.resolve(mockResponse),
     } as any);
 
     await expect(service.validateBot('test-bot')).resolves.not.toThrow();
@@ -54,7 +54,7 @@ describe('TelegramService', () => {
     };
 
     vi.mocked(fetch).mockResolvedValue({
-      json: () => Promise.resolve(mockResponse),
+      json: (): Promise<any> => Promise.resolve(mockResponse),
     } as any);
 
     await expect(service.validateBot('test-bot')).rejects.toThrow(
@@ -69,7 +69,7 @@ describe('TelegramService', () => {
     };
 
     vi.mocked(fetch).mockResolvedValue({
-      json: () => Promise.resolve(mockResponse),
+      json: (): Promise<any> => Promise.resolve(mockResponse),
     } as any);
 
     await expect(service.validateChat('test-user')).rejects.toThrow(
@@ -80,7 +80,7 @@ describe('TelegramService', () => {
   it('should send message successfully', async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ ok: true }),
+      json: (): Promise<any> => Promise.resolve({ ok: true }),
     } as any);
 
     await service.sendMessage('test message');
@@ -96,7 +96,8 @@ describe('TelegramService', () => {
 
   it('should throw error when getMe fails', async () => {
     vi.mocked(fetch).mockResolvedValue({
-      json: () => Promise.resolve({ ok: false, description: 'API Error' }),
+      json: (): Promise<any> =>
+        Promise.resolve({ ok: false, description: 'API Error' }),
     } as any);
 
     await expect(service.validateBot('test-bot')).rejects.toThrow(
@@ -106,7 +107,8 @@ describe('TelegramService', () => {
 
   it('should throw error when getChat fails', async () => {
     vi.mocked(fetch).mockResolvedValue({
-      json: () => Promise.resolve({ ok: false, description: 'API Error' }),
+      json: (): Promise<any> =>
+        Promise.resolve({ ok: false, description: 'API Error' }),
     } as any);
 
     await expect(service.validateChat('test-user')).rejects.toThrow(
@@ -117,7 +119,8 @@ describe('TelegramService', () => {
   it('should throw error when sendMessage fails', async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
-      json: () => Promise.resolve({ ok: false, description: 'Send Error' }),
+      json: (): Promise<any> =>
+        Promise.resolve({ ok: false, description: 'Send Error' }),
     } as any);
 
     await expect(service.sendMessage('test message')).rejects.toThrow(
