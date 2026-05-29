@@ -28,11 +28,18 @@ export class TelegramService {
   public async validateBot(expectedBotUsername: string): Promise<void> {
     this.logger.debug(`Validating bot: ${expectedBotUsername}`);
     try {
-      const response = await fetchWithRetry(
-        `https://api.telegram.org/bot${this.token}/getMe`,
-        { timeoutMs: this.DEFAULT_TIMEOUT, retries: this.DEFAULT_RETRIES },
-      );
-      const data = (await response.json()) as TelegramBotInfo;
+      this.logger.debug('Calling getMe API...');
+      const response = await fetchWithRetry<
+        Response & { parsedData: TelegramBotInfo }
+      >(`https://api.telegram.org/bot${this.token}/getMe`, {
+        timeoutMs: this.DEFAULT_TIMEOUT,
+        retries: this.DEFAULT_RETRIES,
+        parseJson: true,
+      });
+      const data = response.parsedData;
+      this.logger.debug('Received bot info', {
+        username: data.result?.username,
+      });
 
       if (!data.ok) {
         const error = new Error(`Failed to get bot info: ${data.description}`);
@@ -50,10 +57,7 @@ export class TelegramService {
       }
       this.logger.debug('Bot validated successfully');
     } catch (error: any) {
-      this.logger.error(
-        `Bot validation failed during network call: ${error.message}`,
-        error,
-      );
+      this.logger.error(`Bot validation failed: ${error.message}`, error);
       throw error;
     }
   }
@@ -64,11 +68,20 @@ export class TelegramService {
   public async validateChat(expectedUsername: string): Promise<void> {
     this.logger.debug(`Validating chat: ${expectedUsername}`);
     try {
-      const response = await fetchWithRetry(
+      this.logger.debug('Calling getChat API...');
+      const response = await fetchWithRetry<
+        Response & { parsedData: TelegramChatInfo }
+      >(
         `https://api.telegram.org/bot${this.token}/getChat?chat_id=${this.chatId}`,
-        { timeoutMs: this.DEFAULT_TIMEOUT, retries: this.DEFAULT_RETRIES },
+        {
+          timeoutMs: this.DEFAULT_TIMEOUT,
+          retries: this.DEFAULT_RETRIES,
+          parseJson: true,
+        },
       );
-      const data = (await response.json()) as TelegramChatInfo;
+      const data = response.parsedData;
+      const chatTitle = data.result?.title || data.result?.username;
+      this.logger.debug('Received chat info', { chatTitle });
 
       if (!data.ok) {
         const error = new Error(`Failed to get chat info: ${data.description}`);
@@ -76,7 +89,6 @@ export class TelegramService {
         throw error;
       }
 
-      const chatTitle = data.result.title || data.result.username;
       if (chatTitle !== expectedUsername) {
         const error = new Error(
           `Chat validation failed: Expected "${expectedUsername}", but found "${chatTitle}"`,
@@ -86,10 +98,7 @@ export class TelegramService {
       }
       this.logger.debug('Chat validated successfully');
     } catch (error: any) {
-      this.logger.error(
-        `Chat validation failed during network call: ${error.message}`,
-        error,
-      );
+      this.logger.error(`Chat validation failed: ${error.message}`, error);
       throw error;
     }
   }
@@ -100,7 +109,8 @@ export class TelegramService {
   public async sendMessage(text: string): Promise<void> {
     this.logger.debug('Sending message to Telegram');
     try {
-      const response = await fetchWithRetry(
+      this.logger.debug('Calling sendMessage API...');
+      const response = await fetchWithRetry<Response & { parsedData: any }>(
         `https://api.telegram.org/bot${this.token}/sendMessage`,
         {
           method: 'POST',
@@ -111,14 +121,13 @@ export class TelegramService {
           }),
           timeoutMs: this.DEFAULT_TIMEOUT,
           retries: this.DEFAULT_RETRIES,
+          parseJson: true,
         },
       );
 
+      const data = response.parsedData;
       if (!response.ok) {
-        const errorData = (await response.json()) as any;
-        const error = new Error(
-          `Failed to send message: ${errorData.description}`,
-        );
+        const error = new Error(`Failed to send message: ${data.description}`);
         this.logger.error('Failed to send message via Telegram', error);
         throw error;
       }

@@ -6,7 +6,7 @@ export class DateUtils {
    */
   public static getJerusalemDateInfo(): DateInfo {
     const now = new Date();
-    
+
     // Format for dd/MM/yyyy
     const dateFormatter = new Intl.DateTimeFormat('he-IL', {
       timeZone: 'Asia/Jerusalem',
@@ -24,9 +24,9 @@ export class DateUtils {
     const formattedDate = dateFormatter.format(now).replace(/\./g, '/'); // Ensure / separator
     const weekday = weekdayFormatter.format(now).replace('יום ', '');
     const fullDateWithDay = `${formattedDate} ${weekday}.`;
-    const year = new Intl.DateTimeFormat('en-US', { 
-      timeZone: 'Asia/Jerusalem', 
-      year: 'numeric' 
+    const year = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Jerusalem',
+      year: 'numeric',
     }).format(now);
 
     return { formattedDate, fullDateWithDay, year };

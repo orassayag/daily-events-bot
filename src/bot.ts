@@ -54,7 +54,9 @@ export class DailyEventsBot {
       const dateInfo = DateUtils.getJerusalemDateInfo();
       this.logger.info(`${EMOJIS.DATA.DATE} Date: ${dateInfo.formattedDate}`);
 
-      this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 1. Checking if message for today already sent`);
+      this.logger.info(
+        `${EMOJIS.ACTIONS.PROCESS} 1. Checking if message for today already sent`,
+      );
       const alreadySent = await this.databaseService.isDateSent(
         dateInfo.formattedDate,
       );
@@ -67,15 +69,22 @@ export class DailyEventsBot {
       }
 
       this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 2. Validating bot and chat`);
-      this.logger.debug(`Validating bot: ${this.config.BOT_USERNAME}`);
+      this.logger.debug(
+        `Starting validation for bot: ${this.config.BOT_USERNAME}`,
+      );
       await this.telegramService.validateBot(this.config.BOT_USERNAME);
-      this.logger.debug(`Validating chat: ${this.config.TARGET_USERNAME}`);
+      this.logger.debug(
+        `Starting validation for chat: ${this.config.TARGET_USERNAME}`,
+      );
       await this.telegramService.validateChat(this.config.TARGET_USERNAME);
+      this.logger.debug('Bot and chat validation completed');
 
-      this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 3. Fetching events from file`);
+      this.logger.info(
+        `${EMOJIS.ACTIONS.PROCESS} 3. Fetching events from file`,
+      );
       const eventsText =
         await this.eventFileService.getEventsForToday(dateInfo);
-      
+
       this.logger.debug('Events fetched', { length: eventsText.length });
 
       this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 4. Sending message`);

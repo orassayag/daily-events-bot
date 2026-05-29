@@ -210,6 +210,7 @@ This application has an MIT license - see the [LICENSE](LICENSE) file for detail
 - Respects robots.txt and implements rate limiting
 - Uses user-agent rotation to avoid detection
 - Implements polite crawling practices
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -5,6 +5,7 @@ export interface FetchOptions extends RequestInit {
   timeoutMs?: number;
   retries?: number;
   retryDelayMs?: number;
+  parseJson?: boolean;
 }
 
 /**
@@ -20,14 +21,15 @@ export class FetchTimeoutError extends Error {
 /**
  * Fetches a resource with timeout and retry logic.
  */
-export async function fetchWithRetry(
+export async function fetchWithRetry<T = Response>(
   url: string,
   options: FetchOptions = {},
-): Promise<Response> {
+): Promise<T> {
   const {
     timeoutMs = 30000, // 30 seconds default
     retries = 3,
     retryDelayMs = 1000,
+    parseJson = false,
     ...fetchOptions
   } = options;
 
@@ -49,11 +51,22 @@ export async function fetchWithRetry(
         signal: controller.signal,
       });
 
-      return response;
+      if (parseJson) {
+        const data = await response.json();
+        return {
+          ...response,
+          ok: response.ok,
+          status: response.status,
+          json: () => Promise.resolve(data),
+          parsedData: data,
+        } as unknown as T;
+      }
+
+      return response as unknown as T;
     } catch (error: any) {
       lastError = error;
 
-      if (error.name === 'AbortError') {
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
         lastError = new FetchTimeoutError(
           `Request to ${url} timed out after ${timeoutMs}ms`,
         );

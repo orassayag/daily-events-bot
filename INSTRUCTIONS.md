@@ -98,10 +98,13 @@ Configuration is managed via `src/settings/settings.ts` and the `.env` file.
 ### Main Crawler (with Monitor)
 
 To run the bot in its standard mode:
+
 ```bash
 pnpm start
 ```
+
 This will:
+
 1. Initialize the DI container.
 2. Check if today's date is already in `db/days.json`.
 3. Validate Telegram credentials.
@@ -186,6 +189,7 @@ The project uses **Vitest** for testing.
 ## Understanding the Console Status Line
 
 The bot provides clear step-by-step logs:
+
 - `1. Checking if message for today already sent`
 - `2. Validating bot and chat`
 - `3. Fetching events from file`

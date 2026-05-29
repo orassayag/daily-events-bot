@@ -8,6 +8,7 @@ import { injectable } from 'inversify';
 @injectable()
 export class Logger {
   private context: string = 'App';
+  private pendingWrites: Set<Promise<void>> = new Set();
 
   setContext(context: string): void {
     this.context = context;
@@ -39,6 +40,15 @@ export class Logger {
     });
   }
 
+  /**
+   * Waits for all pending file writes to complete.
+   */
+  async flush(): Promise<void> {
+    if (this.pendingWrites.size > 0) {
+      await Promise.allSettled(Array.from(this.pendingWrites));
+    }
+  }
+
   private log(
     level: LogLevel,
     message: string,
@@ -64,9 +74,15 @@ export class Logger {
     }
 
     if (LOG_CONFIG.enableFile) {
-      this.writeToFile(entry).catch((err) => {
-        console.error('Failed to write log to file:', err);
-      });
+      const writePromise = this.writeToFile(entry);
+      this.pendingWrites.add(writePromise);
+      writePromise
+        .catch((err) => {
+          console.error('Failed to write log to file:', err);
+        })
+        .finally(() => {
+          this.pendingWrites.delete(writePromise);
+        });
     }
   }
 
