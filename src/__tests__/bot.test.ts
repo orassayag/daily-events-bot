@@ -59,8 +59,9 @@ describe('DailyEventsBot', () => {
       'Events text',
     );
 
-    await bot.run();
+    const result = await bot.run();
 
+    expect(result).toBe(true);
     expect(databaseService.isDateSent).toHaveBeenCalled();
     expect(telegramService.validateBot).toHaveBeenCalledWith('test-bot');
     expect(telegramService.validateChat).toHaveBeenCalledWith('test-target');
@@ -69,57 +70,34 @@ describe('DailyEventsBot', () => {
     expect(databaseService.markDateAsSent).toHaveBeenCalled();
   });
 
-  it('should throw validation error if message for today was already sent', async () => {
+  it('should return false if message for today was already sent', async () => {
     vi.mocked(databaseService.isDateSent).mockResolvedValue(true);
-    const mockExit = vi
-      .spyOn(process, 'exit')
-      .mockImplementation(() => undefined as never);
 
-    await bot.run();
+    const result = await bot.run();
 
-    expect(mockExit).toHaveBeenCalledWith(1);
-    mockExit.mockRestore();
+    expect(result).toBe(false);
+    expect(telegramService.sendMessage).not.toHaveBeenCalled();
   });
 
-  it('should exit with error if environment variables are missing', async () => {
+  it('should throw error if environment variables are missing', () => {
     delete process.env.BOT_USERNAME;
-    const mockExit = vi
-      .spyOn(process, 'exit')
-      .mockImplementation(() => undefined as never);
 
-    // Re-instantiate bot to trigger validateEnv
-    try {
+    // The constructor calls validateEnv
+    expect(() => {
       new DailyEventsBot(
         telegramService,
         eventFileService,
         databaseService,
         logger,
       );
-    } catch {
-      // Expected
-    }
-
-    // Since constructor calls validateEnv and we want to test run's catch block,
-    // we should mock validateEnv or trigger an error during run
-    vi.mocked(telegramService.validateBot).mockRejectedValue(
-      new Error('Env error'),
-    );
-    await bot.run();
-    expect(mockExit).toHaveBeenCalledWith(1);
-    mockExit.mockRestore();
+    }).toThrow(/Missing environment variables/);
   });
 
-  it('should exit with error if something fails', async () => {
-    const mockExit = vi
-      .spyOn(process, 'exit')
-      .mockImplementation(() => undefined as never);
+  it('should throw error if something fails', async () => {
     vi.mocked(telegramService.validateChat).mockRejectedValue(
       new Error('Failed'),
     );
 
-    await bot.run();
-
-    expect(mockExit).toHaveBeenCalledWith(1);
-    mockExit.mockRestore();
+    await expect(bot.run()).rejects.toThrow('Failed');
   });
 });

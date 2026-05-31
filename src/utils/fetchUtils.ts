@@ -105,7 +105,7 @@ export async function fetchWithRetry<T = Response>(
     } catch (error: any) {
       clearTimeout(timer);
 
-      // Normalise timeout errors so callers can instanceof-check reliably.
+      // Normalize timeout errors so callers can instanceof-check reliably.
       if (error.name === 'AbortError' || error.name === 'TimeoutError') {
         lastError = new FetchTimeoutError(
           `Request to ${url} timed out after ${timeoutMs}ms (attempt ${attempt + 1}/${totalAttempts})`,
@@ -121,6 +121,6 @@ export async function fetchWithRetry<T = Response>(
   throw new FetchExhaustedError(url, totalAttempts, lastError);
 }
 
-function sleep(ms: number): Promise<void> {
+export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

@@ -46,8 +46,9 @@ export class DailyEventsBot {
 
   /**
    * Main execution flow.
+   * @returns {Promise<boolean>} True if message was sent, false if already sent for today.
    */
-  public async run(): Promise<void> {
+  public async run(): Promise<boolean> {
     try {
       this.logger.info(`${EMOJIS.STATUS.INFO} Daily Events Bot Started`);
 
@@ -61,11 +62,10 @@ export class DailyEventsBot {
         dateInfo.formattedDate,
       );
       if (alreadySent) {
-        const error = new Error(
-          `Validation Error: A message for today (${dateInfo.formattedDate}) was already sent.`,
+        this.logger.info(
+          `${EMOJIS.STATUS.SUCCESS} Validation: A message for today (${dateInfo.formattedDate}) was already sent. Nothing to do.`,
         );
-        this.logger.warn(error.message);
-        throw error;
+        return false;
       }
 
       this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 2. Validating bot and chat`);
@@ -94,9 +94,10 @@ export class DailyEventsBot {
       await this.databaseService.markDateAsSent(dateInfo.formattedDate);
 
       this.logger.info(`${EMOJIS.STATUS.SUCCESS} Success: Message sent`);
+      return true;
     } catch (error: any) {
       this.logger.error(`Execution failed: ${error.message}`, error);
-      process.exit(1);
+      throw error;
     }
   }
 }
