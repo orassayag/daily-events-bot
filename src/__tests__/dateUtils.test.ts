@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DateUtils } from '../utils/dateUtils.js';
+import { DateUtils } from '../utils/index.js';
 
 describe('DateUtils', () => {
   it('should return date info in correct format', () => {

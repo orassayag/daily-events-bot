@@ -1,3 +1,10 @@
 {
-  "cSpell.words": ["Assayag", "newbot", "orassayag", "msvc"]
+  "cSpell.words": ["Assayag", "msvc", "newbot", "orassayag", "userinfobot"],
+  "cSpell.ignorePaths": [
+    "coverage",
+    "node_modules",
+    "dist",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml"
+  ]
 }

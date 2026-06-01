@@ -1,10 +1,9 @@
 import { injectable, inject } from 'inversify';
 import fs from 'fs/promises';
 import path from 'path';
-import { DateInfo } from '../types/index.js';
-import { TYPES } from '../di/identifiers.js';
+import { DateInfo, TYPES } from '../types/index.js';
 import { Logger } from '../logging/index.js';
-import { EMOJIS } from '../constants/emojis.js';
+import { EMOJIS } from '../constants/index.js';
 
 @injectable()
 export class EventFileService {
@@ -50,7 +49,7 @@ export class EventFileService {
     }
     if (matchingFiles.length > 1) {
       const error = new Error(
-        `More than one file found matching pattern: ${pattern}`,
+        `More than one file found matching pattern: ${pattern}`
       );
       this.logger.error('Multiple event files found', error);
       throw error;
@@ -64,7 +63,7 @@ export class EventFileService {
 
     // 8. Search for today's date
     const startIndex = lines.findIndex((line) =>
-      line.trim().startsWith(fullDateWithDay),
+      line.trim().startsWith(fullDateWithDay)
     );
     if (startIndex === -1) {
       const error = new Error(`Date "${fullDateWithDay}" not found in file.`);
@@ -73,11 +72,11 @@ export class EventFileService {
     }
 
     const allMatches = lines.filter((line) =>
-      line.trim().startsWith(fullDateWithDay),
+      line.trim().startsWith(fullDateWithDay)
     );
     if (allMatches.length > 1) {
       const error = new Error(
-        `Found more than 1 match for "${fullDateWithDay}" in file.`,
+        `Found more than 1 match for "${fullDateWithDay}" in file.`
       );
       this.logger.error('Ambiguous date in events file', error);
       throw error;
@@ -109,7 +108,7 @@ export class EventFileService {
     }
 
     this.logger.info(
-      `${EMOJIS.DATA.FILE} Successfully extracted ${resultLines.length} lines of events`,
+      `${EMOJIS.DATA.FILE} Successfully extracted ${resultLines.length} lines of events`
     );
     return resultLines.join('\n');
   }

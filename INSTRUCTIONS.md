@@ -1,16 +1,33 @@
-# Instructions
+# Setup and Usage Instructions
 
-## Setup Instructions
+## Table of Contents
 
-1. Open the project in your IDE (VSCode recommended).
-2. Install dependencies using pnpm:
-   ```bash
-   pnpm install
-   ```
-3. Configure your environment variables in a `.env` file (see [Prerequisites](#prerequisites)).
-4. Prepare your event data files in the designated folder.
+1. [Prerequisites](#prerequisites)
+2. [Initial Setup](#initial-setup)
+3. [Available Commands](#available-commands)
+4. [Running Scripts](#running-scripts)
+5. [Quick Start Guide](#quick-start-guide)
+6. [File Structure](#file-structure)
+7. [Troubleshooting](#troubleshooting)
+8. [Extending the Application](#extending-the-application)
+9. [Documentation](#documentation)
+10. [Best Practices](#best-practices)
 
 ## Prerequisites
+
+### System Requirements
+
+- **Node.js**: Version 20 or higher
+- **Package Manager**: pnpm (recommended) or npm
+- **Operating System**: Windows, macOS, or Linux
+- **Memory**: 1GB RAM minimum
+- **Disk Space**: 100MB for application and dependencies
+
+### External Resources
+
+- [Telegram Bot API Documentation](https://core.telegram.org/bots/api)
+- [InversifyJS Documentation](https://inversify.io/)
+- [Vitest Documentation](https://vitest.dev/)
 
 - **Node.js**: Version 18 or higher.
 - **pnpm**: Recommended package manager.
@@ -21,6 +38,86 @@
   - `CHAT_ID`: Your target chat ID.
   - `BOT_USERNAME`: Your bot's username.
   - `TARGET_USERNAME`: The title/username of the target chat for validation.
+
+## Initial Setup
+
+### 1. Install Dependencies
+
+**Using pnpm (recommended):**
+
+```bash
+pnpm install
+```
+
+**Using npm:**
+
+```bash
+npm install
+```
+
+### 2. Telegram Bot Setup
+
+1. Message [@BotFather](https://t.me/botfather) on Telegram.
+2. Create a new bot and get the API token.
+3. Get your target chat ID (you can use bots like `@userinfobot` or check the URL in Telegram Web).
+
+### 3. Environment Configuration
+
+Copy `.env.example` to `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Fill in your credentials in `.env`.
+
+## Available Commands
+
+### Development Commands
+
+**Linting and Formatting:**
+
+```bash
+# Check code style and quality
+pnpm lint
+
+# Format all TypeScript files
+pnpm format
+
+# Check formatting without modifying files
+pnpm format:check
+```
+
+**Building:**
+
+```bash
+# Compile TypeScript to JavaScript
+pnpm build
+
+# Development mode with auto-reload
+pnpm dev
+```
+
+**Testing:**
+
+```bash
+# Run all tests
+pnpm test
+
+# Run tests in watch mode (during development)
+pnpm test:watch
+
+# Generate coverage report
+pnpm test:coverage
+```
+
+### Running Scripts
+
+To run the bot in its standard mode:
+
+```bash
+pnpm start
+```
 
 ## Configuration
 
@@ -224,6 +321,29 @@ The bot provides clear step-by-step logs:
 - **Separators**: Use `===` or `###` in your event files to mark the end of a day's events.
 - **Jerusalem Time**: The bot uses Jerusalem time regardless of the server's local time.
 - **One-time Send**: Once a date is marked in `db/days.json`, the bot will not send it again unless the entry is manually removed.
+
+## Extending the Application
+
+1. **Add a New Service**: Create a new service in `src/services/`.
+2. **Define Identifiers**: If needed, add new identifiers in `src/di/identifiers.ts` (if applicable) or use the class itself.
+3. **Register in Container**: Add the new service to the container in `src/di/container.ts`.
+4. **Inject and Use**: Inject the service into `bot.ts` or other services using the `@inject` decorator.
+
+## Documentation
+
+- **Project Overview**: See [README.md](file:///c:/Or/web/projects/daily-events-bot/README.md) for architecture and high-level logic.
+- **Change Log**: See [CHANGELOG.md](file:///c:/Or/web/projects/daily-events-bot/CHANGELOG.md) for version history.
+- **Contributing**: See [CONTRIBUTING.md](file:///c:/Or/web/projects/daily-events-bot/CONTRIBUTING.md) for development guidelines.
+
+## Best Practices
+
+1. **One-time Send Principle**: The bot is designed to be lightweight and run once per day. It relies on `db/days.json` to maintain state.
+2. **Jerusalem Timezone**: Always remember that date calculations are pinned to `Asia/Jerusalem`.
+3. **Event File Format**: Ensure your event files follow the `DD/MM/YYYY Weekday.` pattern for accurate parsing.
+4. **Environment Security**: Keep your `.env` file secure and never commit it to version control.
+5. **Regular Testing**: Run `pnpm test` after making changes to ensure core services still function as expected.
+
+**Last Updated**: 2026-06-01
 
 ## Author
 

@@ -21,7 +21,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "allowSyntheticDefaultImports": true,
-    "types": ["node", "reflect-metadata"]
+    "types": ["node", "vitest"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

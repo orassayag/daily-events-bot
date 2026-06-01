@@ -1,8 +1,11 @@
 import 'reflect-metadata';
-import { container, TYPES } from './di/index.js';
-import { DailyEventsBot } from './bot.js';
+import { container } from './di/index.js';
+import { TYPES } from './types/index.js';
+import { DailyEventsBot } from './core/index.js';
 import { Logger } from './logging/index.js';
-import { sleep } from './utils/fetchUtils.js';
+import { sleep } from './utils/index.js';
+
+export { DailyEventsBot };
 
 const logger = container.get<Logger>(TYPES.Logger);
 logger.setContext('Main');
@@ -15,13 +18,13 @@ const RETRY_DELAY_MS = 60000; // 1 minute
 const GLOBAL_TIMEOUT_MS = 900000;
 const timeoutHandle = setTimeout(async () => {
   logger.error(
-    `Bot execution timed out after ${GLOBAL_TIMEOUT_MS}ms. Force exiting.`,
+    `Bot execution timed out after ${GLOBAL_TIMEOUT_MS}ms. Force exiting.`
   );
   await logger.flush();
   process.exit(1);
 }, GLOBAL_TIMEOUT_MS);
 
-async function runWithRetry(): Promise<void> {
+export async function main(): Promise<void> {
   const bot = container.get<DailyEventsBot>(TYPES.DailyEventsBot);
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -37,11 +40,18 @@ async function runWithRetry(): Promise<void> {
       await logger.flush();
       process.exit(0);
     } catch (error: any) {
+      // Don't catch process.exit errors in tests
+      if (error.message?.includes('process.exit')) throw error;
+
       logger.error(`Attempt ${attempt} failed: ${error.message}`);
 
       if (attempt === MAX_RETRIES) {
         logger.error('All retry attempts exhausted.');
-        throw error;
+
+        clearTimeout(timeoutHandle);
+        logger.error('Fatal error during bot execution after retries', error);
+        await logger.flush();
+        process.exit(1);
       }
 
       logger.info(`Waiting ${RETRY_DELAY_MS / 1000}s before next retry...`);
@@ -50,9 +60,9 @@ async function runWithRetry(): Promise<void> {
   }
 }
 
-runWithRetry().catch(async (error) => {
-  clearTimeout(timeoutHandle);
-  logger.error('Fatal error during bot execution after retries', error);
-  await logger.flush();
-  process.exit(1);
-});
+// Only run if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  main().catch(() => {
+    // Already handled in main
+  });
+}

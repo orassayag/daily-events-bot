@@ -1,14 +1,15 @@
 import { injectable, inject } from 'inversify';
 import 'dotenv/config';
-import { TYPES } from './di/identifiers.js';
-import { TelegramService } from './services/telegramService.js';
-import { EventFileService } from './services/eventFileService.js';
-import { DatabaseService } from './services/databaseService.js';
-import { Logger } from './logging/index.js';
-import { DateUtils } from './utils/dateUtils.js';
-import { settings } from './settings/index.js';
-import { EnvConfig } from './types/index.js';
-import { EMOJIS } from './constants/emojis.js';
+import {
+  TelegramService,
+  EventFileService,
+  DatabaseService,
+} from '../services/index.js';
+import { Logger } from '../logging/index.js';
+import { DateUtils } from '../utils/index.js';
+import { settings } from '../settings/index.js';
+import { EnvConfig, TYPES } from '../types/index.js';
+import { EMOJIS } from '../constants/index.js';
 
 @injectable()
 export class DailyEventsBot {
@@ -18,7 +19,7 @@ export class DailyEventsBot {
     @inject(TYPES.TelegramService) private telegramService: TelegramService,
     @inject(TYPES.EventFileService) private eventFileService: EventFileService,
     @inject(TYPES.DatabaseService) private databaseService: DatabaseService,
-    @inject(TYPES.Logger) private logger: Logger,
+    @inject(TYPES.Logger) private logger: Logger
   ) {
     this.logger.setContext('DailyEventsBot');
     this.config = this.validateEnv();
@@ -35,7 +36,7 @@ export class DailyEventsBot {
     const { BOT_USERNAME, TARGET_USERNAME, TOKEN, CHAT_ID } = process.env;
     if (!BOT_USERNAME || !TARGET_USERNAME || !TOKEN || !CHAT_ID) {
       const error = new Error(
-        'Missing environment variables: BOT_USERNAME, TARGET_USERNAME, TOKEN, or CHAT_ID. Please check your .env file.',
+        'Missing environment variables: BOT_USERNAME, TARGET_USERNAME, TOKEN, or CHAT_ID. Please check your .env file.'
       );
       this.logger.error('Environment validation failed', error);
       throw error;
@@ -56,31 +57,31 @@ export class DailyEventsBot {
       this.logger.info(`${EMOJIS.DATA.DATE} Date: ${dateInfo.formattedDate}`);
 
       this.logger.info(
-        `${EMOJIS.ACTIONS.PROCESS} 1. Checking if message for today already sent`,
+        `${EMOJIS.ACTIONS.PROCESS} 1. Checking if message for today already sent`
       );
       const alreadySent = await this.databaseService.isDateSent(
-        dateInfo.formattedDate,
+        dateInfo.formattedDate
       );
       if (alreadySent) {
         this.logger.info(
-          `${EMOJIS.STATUS.SUCCESS} Validation: A message for today (${dateInfo.formattedDate}) was already sent. Nothing to do.`,
+          `${EMOJIS.STATUS.SUCCESS} Validation: A message for today (${dateInfo.formattedDate}) was already sent. Nothing to do.`
         );
         return false;
       }
 
       this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 2. Validating bot and chat`);
       this.logger.debug(
-        `Starting validation for bot: ${this.config.BOT_USERNAME}`,
+        `Starting validation for bot: ${this.config.BOT_USERNAME}`
       );
       await this.telegramService.validateBot(this.config.BOT_USERNAME);
       this.logger.debug(
-        `Starting validation for chat: ${this.config.TARGET_USERNAME}`,
+        `Starting validation for chat: ${this.config.TARGET_USERNAME}`
       );
       await this.telegramService.validateChat(this.config.TARGET_USERNAME);
       this.logger.debug('Bot and chat validation completed');
 
       this.logger.info(
-        `${EMOJIS.ACTIONS.PROCESS} 3. Fetching events from file`,
+        `${EMOJIS.ACTIONS.PROCESS} 3. Fetching events from file`
       );
       const eventsText =
         await this.eventFileService.getEventsForToday(dateInfo);

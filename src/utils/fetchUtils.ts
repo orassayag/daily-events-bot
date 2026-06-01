@@ -16,7 +16,7 @@ export class FetchTimeoutError extends Error {
   constructor(
     message: string = 'Fetch request timed out',
     public readonly url?: string,
-    public readonly timeoutMs?: number,
+    public readonly timeoutMs?: number
   ) {
     super(message);
     this.name = 'FetchTimeoutError';
@@ -30,10 +30,10 @@ export class FetchExhaustedError extends Error {
   constructor(
     public readonly url: string,
     public readonly attempts: number,
-    public readonly cause: Error,
+    public readonly cause: Error
   ) {
     super(
-      `All ${attempts} attempt(s) failed for ${url}. Last error: ${cause.message}`,
+      `All ${attempts} attempt(s) failed for ${url}. Last error: ${cause.message}`
     );
     this.name = 'FetchExhaustedError';
   }
@@ -50,7 +50,7 @@ export class FetchExhaustedError extends Error {
  */
 export async function fetchWithRetry<T = Response>(
   url: string,
-  options: FetchOptions = {},
+  options: FetchOptions = {}
 ): Promise<T> {
   const {
     timeoutMs = 30000,
@@ -110,7 +110,7 @@ export async function fetchWithRetry<T = Response>(
         lastError = new FetchTimeoutError(
           `Request to ${url} timed out after ${timeoutMs}ms (attempt ${attempt + 1}/${totalAttempts})`,
           url,
-          timeoutMs,
+          timeoutMs
         );
       } else {
         lastError = error instanceof Error ? error : new Error(String(error));

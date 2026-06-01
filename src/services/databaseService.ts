@@ -1,9 +1,9 @@
 import { injectable, inject } from 'inversify';
 import fs from 'fs/promises';
 import path from 'path';
-import { TYPES } from '../di/identifiers.js';
+import { TYPES } from '../types/index.js';
 import { Logger } from '../logging/index.js';
-import { EMOJIS } from '../constants/emojis.js';
+import { EMOJIS } from '../constants/index.js';
 
 @injectable()
 export class DatabaseService {
@@ -39,7 +39,7 @@ export class DatabaseService {
       data.sent.push(date);
       await this.writeDb(data);
       this.logger.info(
-        `${EMOJIS.DATA.DATABASE} Date ${date} marked as sent in database`,
+        `${EMOJIS.DATA.DATABASE} Date ${date} marked as sent in database`
       );
     } else {
       this.logger.debug(`Date ${date} was already marked as sent`);
@@ -57,7 +57,7 @@ export class DatabaseService {
       return JSON.parse(content);
     } catch {
       this.logger.debug(
-        'Database file not found or invalid, returning empty structure',
+        'Database file not found or invalid, returning empty structure'
       );
       // If file doesn't exist or is invalid, return empty structure
       return { sent: [] };

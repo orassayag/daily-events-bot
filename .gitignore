@@ -3,7 +3,6 @@ dist
 out
 build
 node_modules
-db
 
 # Logs
 *.log*
@@ -28,3 +27,7 @@ api-stats.json
 
 # Tests
 coverage
+
+# Others:
+# Distribution
+db

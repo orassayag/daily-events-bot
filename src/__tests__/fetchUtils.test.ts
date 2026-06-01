@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchWithRetry, FetchExhaustedError } from '../utils/fetchUtils.js';
+import { fetchWithRetry, FetchExhaustedError } from '../utils/index.js';
 
 describe('fetchUtils', () => {
   beforeEach(() => {
@@ -77,10 +77,12 @@ describe('fetchUtils', () => {
       retries: 0,
     });
 
-    // Fast-forward to trigger timeout
-    await vi.advanceTimersByTimeAsync(1500);
+    // Fast-forward to trigger timeout and expect rejection
+    await Promise.all([
+      vi.advanceTimersByTimeAsync(1500),
+      expect(fetchPromise).rejects.toThrow(FetchExhaustedError),
+    ]);
 
-    await expect(fetchPromise).rejects.toThrow(FetchExhaustedError);
     await expect(fetchPromise).rejects.toThrow(/timed out after 1000ms/);
   });
 
@@ -92,7 +94,7 @@ describe('fetchUtils', () => {
             const error = new Error('AbortError');
             error.name = 'AbortError';
             setTimeout(() => reject(error), 100);
-          }),
+          })
       )
       .mockResolvedValueOnce({
         ok: true,

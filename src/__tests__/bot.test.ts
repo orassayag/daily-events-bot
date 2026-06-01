@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DailyEventsBot } from '../bot.js';
-import { TelegramService } from '../services/telegramService.js';
-import { EventFileService } from '../services/eventFileService.js';
-import { DatabaseService } from '../services/databaseService.js';
+import { DailyEventsBot } from '../core/index.js';
+import {
+  TelegramService,
+  EventFileService,
+  DatabaseService,
+} from '../services/index.js';
 import 'reflect-metadata';
 
 describe('DailyEventsBot', () => {
@@ -50,13 +52,13 @@ describe('DailyEventsBot', () => {
       telegramService,
       eventFileService,
       databaseService,
-      logger,
+      logger
     );
   });
 
   it('should run the bot successfully', async () => {
     vi.mocked(eventFileService.getEventsForToday).mockResolvedValue(
-      'Events text',
+      'Events text'
     );
 
     const result = await bot.run();
@@ -88,14 +90,14 @@ describe('DailyEventsBot', () => {
         telegramService,
         eventFileService,
         databaseService,
-        logger,
+        logger
       );
     }).toThrow(/Missing environment variables/);
   });
 
   it('should throw error if something fails', async () => {
     vi.mocked(telegramService.validateChat).mockRejectedValue(
-      new Error('Failed'),
+      new Error('Failed')
     );
 
     await expect(bot.run()).rejects.toThrow('Failed');

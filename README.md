@@ -1,10 +1,32 @@
-# daily-events-bot
+# Daily Events Bot
 
 Automated scheduler script that compiles your daily tasks, holidays, birthdays, anniversaries, memorial dates, service expirations, and routine activities, then sends them via a Telegram bot to a chat, triggering mobile notifications that help you stay organized, consistent, and always on track.
 
 Built to streamline personal organization, this Node.js application reads event data from local text files, validates the current date against a local database to prevent duplicate notifications, and communicates directly with the Telegram Bot API.
 
 ## Features
+
+### Core Capabilities
+
+- **Automated Daily Scheduling**: Fetches events for the current day automatically.
+- **Telegram Integration**: Sends formatted event lists directly to a specified Telegram chat.
+- **Jerusalem Timezone Support**: Specifically designed to operate on Jerusalem time with Hebrew day name support.
+- **Local JSON Database**: Tracks sent notifications to ensure each day's events are only sent once.
+- **Flexible Event Parsing**: Reads events from yearly text files with a simple, readable format.
+
+### Technical Excellence
+
+- **Dependency Injection**: Clean, testable service architecture with InversifyJS.
+- **Type Safety**: Full TypeScript with strict type checking.
+- **Comprehensive Testing**: Unit tests for core services and utilities using Vitest.
+- **Modular Architecture**: Separated concerns between orchestration, data retrieval, and messaging.
+
+### Developer Experience
+
+- **Environment Management**: Simple `.env` based configuration.
+- **Watch Mode**: `pnpm dev` for hot-reloading during development.
+- **Clear Logging**: Step-by-step console output for easy troubleshooting.
+- **Modern Tooling**: Powered by Vitest, ESLint, and Prettier.
 
 - � **Automated Daily Scheduling**: Fetches events for the current day automatically.
 - 🤖 **Telegram Integration**: Sends formatted event lists directly to a specified Telegram chat.
@@ -57,6 +79,39 @@ CHAT_ID=your_target_chat_id
 pnpm start
 ```
 
+## Usage
+
+### Running the Bot
+
+To run the bot in its standard mode:
+
+```bash
+pnpm start
+```
+
+This will:
+
+1. Initialize the DI container.
+2. Check if today's date is already in `db/days.json`.
+3. Validate Telegram credentials.
+4. Fetch and send today's events.
+
+### Development Mode
+
+For development with hot-reloading:
+
+```bash
+pnpm dev
+```
+
+### Testing
+
+Run the test suite using Vitest:
+
+```bash
+pnpm test
+```
+
 ## Configuration
 
 Edit `src/settings/settings.ts` to configure file paths:
@@ -99,6 +154,62 @@ daily-events-bot/
 ├── package.json          # Project configuration and dependencies
 └── tsconfig.json         # TypeScript configuration
 ```
+
+## Directory Structure
+
+```
+daily-events-bot/
+├── .github/              # GitHub Actions and rulesets
+├── .vscode/              # VS Code settings and snippets
+├── db/                   # Persistence layer (JSON database)
+├── logs/                 # Application logs and execution details
+├── misc/                 # Miscellaneous planning and documentation
+├── src/
+│   ├── __tests__/        # Unit and integration tests
+│   ├── constants/        # Application-wide constants and emojis
+│   ├── core/             # Core business logic and orchestration
+│   ├── di/               # InversifyJS container and configuration
+│   ├── logging/          # Structured logging implementation
+│   ├── services/         # Domain services (Telegram, File, DB)
+│   ├── settings/         # Centralized configuration management
+│   ├── types/            # TypeScript domain types
+│   ├── utils/            # Shared utility functions
+│   ├── bot.ts            # Main orchestration class
+│   └── index.ts          # Application entry point
+├── .env.example          # Environment variable template
+├── .gitignore            # Git exclusion rules
+├── .npmrc                # NPM configuration
+├── .prettierrc           # Prettier formatting rules
+├── CHANGELOG.md          # Version history
+├── CODE_OF_CONDUCT.md    # Community standards
+├── CONTRIBUTING.md       # Contribution guidelines
+├── dailyEventsBot.bat    # Windows execution script
+├── eslint.config.mjs     # ESLint configuration
+├── INSTRUCTIONS.md       # Detailed setup instructions
+├── LICENSE               # MIT License
+├── package.json          # Dependency management and scripts
+├── pnpm-lock.yaml        # Locked dependency versions
+├── pnpm-workspace.yaml   # PNPM workspace configuration
+├── README.md             # Project overview and documentation
+├── SECURITY.md           # Security policy
+├── tsconfig.json         # TypeScript configuration
+└── vitest.config.ts      # Vitest testing configuration
+```
+
+## Architecture Principles
+
+1. **Dependency Injection**: All services use `@injectable` decorators and are managed by InversifyJS.
+2. **Single Responsibility**: Each service handles a specific domain (Telegram, File System, Database).
+3. **Immutability**: Data structures are treated as immutable where possible.
+4. **Localization**: Date and time handling is centralized and respects Jerusalem timezone requirements.
+5. **Testability**: Pure functions and dependency injection enable easy unit testing.
+
+## Design Patterns
+
+- **Dependency Injection**: Services are loosely coupled via InversifyJS.
+- **Orchestrator Pattern**: `DailyEventsBot` manages the high-level flow.
+- **Service Pattern**: Business logic encapsulated in dedicated service classes.
+- **Singleton Pattern**: Services are managed as singletons within the DI container.
 
 ## How It Works
 
@@ -175,6 +286,14 @@ Date: 04/05/2026
 - **Mocking**: Services are designed to be easily mockable for testing purposes.
 - **Formatting**: Ensure code quality by running `pnpm format` before contributing.
 
+## Best Practices
+
+1. **Regular Backups**: Back up your `db/days.json` and event files periodically.
+2. **Environment Security**: Never commit your `.env` file or expose your Telegram token.
+3. **Event Formatting**: Follow the `DD/MM/YYYY Weekday.` pattern for consistent event parsing.
+4. **Log Monitoring**: Check console logs to ensure daily tasks are being processed and sent.
+5. **Dependency Management**: Use `pnpm` for consistent dependency installation.
+
 ## Contributing
 
 Contributions are welcome! Please follow the guidelines in `CONTRIBUTING.md`.
@@ -191,10 +310,6 @@ Contributions are welcome! Please follow the guidelines in `CONTRIBUTING.md`.
 - [InversifyJS](https://inversify.io/) - Powerful and lightweight IoC container
 - [Vitest](https://vitest.dev/) - Next generation testing framework
 - [Telegram Bot API](https://core.telegram.org/bots/api) - For sending notifications
-
-## License
-
-This application has an MIT license - see the [LICENSE](LICENSE) file for details.
 
 ## Author
 

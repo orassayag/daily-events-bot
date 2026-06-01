@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EventFileService } from '../services/eventFileService.js';
+import { EventFileService } from '../services/index.js';
 import fs from 'fs/promises';
 import 'reflect-metadata';
 
@@ -49,7 +49,7 @@ describe('EventFileService', () => {
     vi.mocked(fs.access).mockRejectedValue(new Error('Not found'));
 
     await expect(service.getEventsForToday({} as any)).rejects.toThrow(
-      'Folder not found',
+      'Folder not found'
     );
   });
 
@@ -58,7 +58,7 @@ describe('EventFileService', () => {
     vi.mocked(fs.readdir).mockResolvedValue([] as any);
 
     await expect(
-      service.getEventsForToday({ year: '2026' } as any),
+      service.getEventsForToday({ year: '2026' } as any)
     ).rejects.toThrow('No file found');
   });
 
@@ -70,7 +70,7 @@ describe('EventFileService', () => {
     ] as any);
 
     await expect(
-      service.getEventsForToday({ year: '2026' } as any),
+      service.getEventsForToday({ year: '2026' } as any)
     ).rejects.toThrow('More than one file found');
   });
 
@@ -83,7 +83,7 @@ describe('EventFileService', () => {
       service.getEventsForToday({
         fullDateWithDay: '04/05/2026 שני.',
         year: '2026',
-      } as any),
+      } as any)
     ).rejects.toThrow('not found in file');
   });
 
@@ -91,14 +91,14 @@ describe('EventFileService', () => {
     vi.mocked(fs.access).mockResolvedValue(undefined);
     vi.mocked(fs.readdir).mockResolvedValue(['event-dates-2026.txt'] as any);
     vi.mocked(fs.readFile).mockResolvedValue(
-      '04/05/2026 שני.\nEvent 1\n04/05/2026 שני.\nEvent 2',
+      '04/05/2026 שני.\nEvent 1\n04/05/2026 שני.\nEvent 2'
     );
 
     await expect(
       service.getEventsForToday({
         fullDateWithDay: '04/05/2026 שני.',
         year: '2026',
-      } as any),
+      } as any)
     ).rejects.toThrow('Found more than 1 match');
   });
 });

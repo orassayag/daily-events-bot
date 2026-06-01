@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DatabaseService } from '../services/databaseService.js';
+import { DatabaseService } from '../services/index.js';
 import fs from 'fs/promises';
 import path from 'path';
 import 'reflect-metadata';
@@ -26,7 +26,7 @@ describe('DatabaseService', () => {
 
   it('should return false if date is not in sent list', async () => {
     vi.mocked(fs.readFile).mockResolvedValue(
-      JSON.stringify({ sent: ['2026-05-01'] }),
+      JSON.stringify({ sent: ['2026-05-01'] })
     );
 
     const result = await service.isDateSent('2026-05-04');
@@ -35,7 +35,7 @@ describe('DatabaseService', () => {
 
   it('should return true if date is in sent list', async () => {
     vi.mocked(fs.readFile).mockResolvedValue(
-      JSON.stringify({ sent: ['2026-05-04'] }),
+      JSON.stringify({ sent: ['2026-05-04'] })
     );
 
     const result = await service.isDateSent('2026-05-04');
@@ -54,7 +54,7 @@ describe('DatabaseService', () => {
 
   it('should mark date as sent if not already present', async () => {
     vi.mocked(fs.readFile).mockResolvedValue(
-      JSON.stringify({ sent: ['2026-05-01'] }),
+      JSON.stringify({ sent: ['2026-05-01'] })
     );
 
     await service.markDateAsSent('2026-05-04');
@@ -62,13 +62,13 @@ describe('DatabaseService', () => {
     expect(fs.writeFile).toHaveBeenCalledWith(
       dbPath,
       expect.stringContaining('2026-05-04'),
-      'utf-8',
+      'utf-8'
     );
   });
 
   it('should not write to file if date is already marked as sent', async () => {
     vi.mocked(fs.readFile).mockResolvedValue(
-      JSON.stringify({ sent: ['2026-05-04'] }),
+      JSON.stringify({ sent: ['2026-05-04'] })
     );
 
     await service.markDateAsSent('2026-05-04');

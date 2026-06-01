@@ -1,8 +1,8 @@
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { LogLevel, LogEntry } from '../types/index.js';
-import { LOG_CONFIG } from './logConfig.js';
-import { EMOJIS } from '../constants/emojis.js';
+import { LOG_CONFIG } from './config/index.js';
+import { EMOJIS } from '../constants/index.js';
 import { injectable } from 'inversify';
 
 @injectable()
@@ -52,7 +52,7 @@ export class Logger {
   private log(
     level: LogLevel,
     message: string,
-    data?: Record<string, unknown>,
+    data?: Record<string, unknown>
   ): void {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
@@ -101,13 +101,9 @@ export class Logger {
   private async writeToFile(entry: LogEntry): Promise<void> {
     const logFilePath = join(process.cwd(), LOG_CONFIG.logDir, 'app.log');
     const logLine = JSON.stringify(entry) + '\n';
-    try {
-      await fs.mkdir(join(process.cwd(), LOG_CONFIG.logDir), {
-        recursive: true,
-      });
-      await fs.appendFile(logFilePath, logLine);
-    } catch {
-      // Don't use console.error here to avoid infinite loops if console is redirected
-    }
+    await fs.mkdir(join(process.cwd(), LOG_CONFIG.logDir), {
+      recursive: true,
+    });
+    await fs.appendFile(logFilePath, logLine);
   }
 }

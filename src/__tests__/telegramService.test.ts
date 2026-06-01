@@ -1,130 +1,261 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TelegramService } from '../services/telegramService.js';
-import 'reflect-metadata';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { TelegramService } from '../services/index.js';
+import { Logger } from '../logging/index.js';
+import {
+  fetchWithRetry,
+  FetchTimeoutError,
+  FetchExhaustedError,
+} from '../utils/index.js';
+
+vi.mock('../utils/index.js', () => ({
+  fetchWithRetry: vi.fn(),
+  FetchTimeoutError: class extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = 'FetchTimeoutError';
+    }
+  },
+  FetchExhaustedError: class extends Error {
+    constructor(url: string, attempts: number, cause: Error) {
+      super(
+        `All ${attempts} attempt(s) failed for ${url}. Last error: ${cause.message}`
+      );
+      this.name = 'FetchExhaustedError';
+      (this as any).cause = cause;
+    }
+  },
+  sleep: vi.fn().mockResolvedValue(undefined),
+}));
 
 describe('TelegramService', () => {
-  let service: TelegramService;
-  const token = 'test-token';
-  const chatId = 'test-chat-id';
-  let logger: any;
+  let telegramService: TelegramService;
+  let mockLogger: Logger;
 
   beforeEach(() => {
-    logger = {
+    vi.useFakeTimers();
+    mockLogger = {
       setContext: vi.fn(),
       debug: vi.fn(),
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
-    };
-    service = new TelegramService(logger);
-    service.init(token, chatId);
-    vi.stubGlobal('fetch', vi.fn());
+    } as any;
+    telegramService = new TelegramService(mockLogger);
+    telegramService.init('test-token', 'test-chat-id');
+    vi.clearAllMocks();
   });
 
-  it('should validate chat successfully', async () => {
-    const mockResponse = {
-      ok: true,
-      result: { title: 'test-user' },
-    };
-
-    vi.mocked(fetch).mockResolvedValue({
-      json: (): Promise<any> => Promise.resolve(mockResponse),
-    } as any);
-
-    await expect(service.validateChat('test-user')).resolves.not.toThrow();
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it('should validate bot successfully', async () => {
-    const mockResponse = {
-      ok: true,
-      result: { username: 'test-bot' },
-    };
+  describe('waitForNetwork', () => {
+    it('should return if network is reachable on first attempt', async () => {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce({ status: 200 } as any);
 
-    vi.mocked(fetch).mockResolvedValue({
-      json: (): Promise<any> => Promise.resolve(mockResponse),
-    } as any);
+      await telegramService.waitForNetwork();
+      expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    });
 
-    await expect(service.validateBot('test-bot')).resolves.not.toThrow();
+    it('should retry if network is not reachable initially', async () => {
+      vi.mocked(fetchWithRetry)
+        .mockRejectedValueOnce(new Error('Network down'))
+        .mockResolvedValueOnce({ status: 200 } as any);
+
+      const promise = telegramService.waitForNetwork();
+
+      // Fast-forward through the sleep
+      await vi.runAllTimersAsync();
+
+      await promise;
+      expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Network reachable on attempt 2')
+      );
+    });
+
+    it('should handle FetchTimeoutError during network check', async () => {
+      vi.mocked(fetchWithRetry)
+        .mockRejectedValueOnce(new FetchTimeoutError('timed out'))
+        .mockResolvedValueOnce({ status: 200 } as any);
+
+      const promise = telegramService.waitForNetwork();
+      await vi.runAllTimersAsync();
+      await promise;
+
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('failed: timed out after 5s')
+      );
+    });
+
+    it('should throw error after all network check attempts fail', async () => {
+      vi.mocked(fetchWithRetry).mockRejectedValue(
+        new Error('Persistent network error')
+      );
+
+      const promise = telegramService.waitForNetwork();
+
+      await Promise.all([
+        vi.runAllTimersAsync(),
+        expect(promise).rejects.toThrow(/unreachable after 6 network checks/),
+      ]);
+
+      expect(fetchWithRetry).toHaveBeenCalledTimes(6);
+    });
+
+    it('should handle non-Error objects in waitForNetwork catch', async () => {
+      vi.mocked(fetchWithRetry)
+        .mockRejectedValueOnce('string error')
+        .mockResolvedValueOnce({ status: 200 } as any);
+
+      const promise = telegramService.waitForNetwork();
+      await vi.runAllTimersAsync();
+      await promise;
+
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('failed: string error')
+      );
+    });
+
+    it('should handle error without message in waitForNetwork catch', async () => {
+      vi.mocked(fetchWithRetry)
+        .mockRejectedValueOnce({})
+        .mockResolvedValueOnce({ status: 200 } as any);
+
+      const promise = telegramService.waitForNetwork();
+      await vi.runAllTimersAsync();
+      await promise;
+
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('failed: [object Object]')
+      );
+    });
   });
 
-  it('should throw error when bot validation fails', async () => {
-    const mockResponse = {
-      ok: true,
-      result: { username: 'wrong-bot' },
-    };
+  describe('validateBot', () => {
+    it('should validate bot username successfully', async () => {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce({
+        parsedData: { ok: true, result: { username: 'expected_bot' } },
+      } as any);
 
-    vi.mocked(fetch).mockResolvedValue({
-      json: (): Promise<any> => Promise.resolve(mockResponse),
-    } as any);
+      await telegramService.validateBot('expected_bot');
+      expect(fetchWithRetry).toHaveBeenCalled();
+    });
 
-    await expect(service.validateBot('test-bot')).rejects.toThrow(
-      'Bot validation failed',
-    );
+    it('should throw error if bot info retrieval fails', async () => {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce({
+        parsedData: { ok: false, description: 'Not Authorized' },
+      } as any);
+
+      await expect(telegramService.validateBot('any')).rejects.toThrow(
+        'Failed to get bot info: Not Authorized'
+      );
+    });
+
+    it('should throw error if bot username does not match', async () => {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce({
+        parsedData: { ok: true, result: { username: 'wrong_bot' } },
+      } as any);
+
+      await expect(telegramService.validateBot('expected_bot')).rejects.toThrow(
+        /Bot validation failed/
+      );
+    });
   });
 
-  it('should throw error when chat validation fails', async () => {
-    const mockResponse = {
-      ok: true,
-      result: { title: 'wrong-user' },
-    };
+  describe('validateChat', () => {
+    it('should validate chat title/username successfully (using title)', async () => {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce({
+        parsedData: { ok: true, result: { title: 'expected_chat' } },
+      } as any);
 
-    vi.mocked(fetch).mockResolvedValue({
-      json: (): Promise<any> => Promise.resolve(mockResponse),
-    } as any);
+      await telegramService.validateChat('expected_chat');
+      expect(fetchWithRetry).toHaveBeenCalled();
+    });
 
-    await expect(service.validateChat('test-user')).rejects.toThrow(
-      'Chat validation failed',
-    );
+    it('should validate chat title/username successfully (using username)', async () => {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce({
+        parsedData: { ok: true, result: { username: 'expected_chat' } },
+      } as any);
+
+      await telegramService.validateChat('expected_chat');
+      expect(fetchWithRetry).toHaveBeenCalled();
+    });
+
+    it('should throw error if chat validation fails', async () => {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce({
+        parsedData: { ok: true, result: { title: 'wrong_chat' } },
+      } as any);
+
+      await expect(
+        telegramService.validateChat('expected_chat')
+      ).rejects.toThrow(/Chat validation failed/);
+    });
   });
 
-  it('should send message successfully', async () => {
-    vi.mocked(fetch).mockResolvedValue({
-      ok: true,
-      json: (): Promise<any> => Promise.resolve({ ok: true }),
-    } as any);
+  describe('sendMessage', () => {
+    it('should send message successfully', async () => {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce({
+        parsedData: { ok: true },
+      } as any);
 
-    await service.sendMessage('test message');
+      await telegramService.sendMessage('Hello');
+      expect(fetchWithRetry).toHaveBeenCalledWith(
+        expect.stringContaining('sendMessage'),
+        expect.any(Object)
+      );
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Message sent successfully')
+      );
+    });
 
-    expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('sendMessage'),
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('test message'),
-      }),
-    );
+    it('should throw error if sendMessage fails', async () => {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce({
+        parsedData: { ok: false, description: 'Forbidden' },
+      } as any);
+
+      await expect(telegramService.sendMessage('Hello')).rejects.toThrow(
+        'Failed to send message: Forbidden'
+      );
+    });
   });
 
-  it('should throw error when getMe fails', async () => {
-    vi.mocked(fetch).mockResolvedValue({
-      json: (): Promise<any> =>
-        Promise.resolve({ ok: false, description: 'API Error' }),
-    } as any);
+  describe('apiCall internal', () => {
+    it('should call onRetry and log debug message', async () => {
+      vi.mocked(fetchWithRetry).mockImplementation((_url, options: any) => {
+        if (options.onRetry) {
+          options.onRetry(1, new Error('Attempt 1 failed'));
+        }
+        return Promise.resolve({ parsedData: { ok: true } } as any);
+      });
 
-    await expect(service.validateBot('test-bot')).rejects.toThrow(
-      'Failed to get bot info: API Error',
-    );
-  });
+      await telegramService.sendMessage('test');
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Retrying sendMessage (attempt 1/3)')
+      );
+    });
 
-  it('should throw error when getChat fails', async () => {
-    vi.mocked(fetch).mockResolvedValue({
-      json: (): Promise<any> =>
-        Promise.resolve({ ok: false, description: 'API Error' }),
-    } as any);
+    it('should handle FetchExhaustedError in apiCall', async () => {
+      const cause = new Error('Original cause');
+      vi.mocked(fetchWithRetry).mockRejectedValueOnce(
+        new FetchExhaustedError('url', 3, cause)
+      );
 
-    await expect(service.validateChat('test-user')).rejects.toThrow(
-      'Failed to get chat info: API Error',
-    );
-  });
+      await expect(telegramService.sendMessage('test')).rejects.toThrow(
+        /Telegram API call exhausted retries/
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
 
-  it('should throw error when sendMessage fails', async () => {
-    vi.mocked(fetch).mockResolvedValue({
-      ok: false,
-      json: (): Promise<any> =>
-        Promise.resolve({ ok: false, description: 'Send Error' }),
-    } as any);
+    it('should handle generic error in apiCall', async () => {
+      vi.mocked(fetchWithRetry).mockRejectedValueOnce(
+        new Error('Generic error')
+      );
 
-    await expect(service.sendMessage('test message')).rejects.toThrow(
-      'Failed to send message: Send Error',
-    );
+      await expect(telegramService.sendMessage('test')).rejects.toThrow(
+        /Telegram API call failed/
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
   });
 });
