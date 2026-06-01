@@ -83,6 +83,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
+    "dry": "cross-env DRY_MODE=true tsx src/index.ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "lint": "eslint \"src/**/*.ts\"",

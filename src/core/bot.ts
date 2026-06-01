@@ -51,6 +51,19 @@ export class DailyEventsBot {
    */
   public async run(): Promise<boolean> {
     try {
+      const dryMode = process.env.DRY_MODE === 'true';
+
+      if (dryMode) {
+        this.logger.info(
+          `${EMOJIS.STATUS.INFO} RUNNING IN DRY MODE - NO MESSAGES WILL BE SENT`
+        );
+        const dateInfo = DateUtils.getJerusalemDateInfo();
+        const eventsText =
+          await this.eventFileService.getEventsForToday(dateInfo);
+        console.log(`\n${eventsText}\n`);
+        return true;
+      }
+
       this.logger.info(`${EMOJIS.STATUS.INFO} Daily Events Bot Started`);
 
       const dateInfo = DateUtils.getJerusalemDateInfo();
@@ -70,23 +83,14 @@ export class DailyEventsBot {
       }
 
       this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 2. Validating bot and chat`);
-      this.logger.debug(
-        `Starting validation for bot: ${this.config.BOT_USERNAME}`
-      );
       await this.telegramService.validateBot(this.config.BOT_USERNAME);
-      this.logger.debug(
-        `Starting validation for chat: ${this.config.TARGET_USERNAME}`
-      );
       await this.telegramService.validateChat(this.config.TARGET_USERNAME);
-      this.logger.debug('Bot and chat validation completed');
 
       this.logger.info(
         `${EMOJIS.ACTIONS.PROCESS} 3. Fetching events from file`
       );
       const eventsText =
         await this.eventFileService.getEventsForToday(dateInfo);
-
-      this.logger.debug('Events fetched', { length: eventsText.length });
 
       this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 4. Sending message`);
       await this.telegramService.sendMessage(eventsText);
