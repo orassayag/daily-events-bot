@@ -35,6 +35,7 @@ describe('DailyEventsBot', () => {
     eventFileService = {
       init: vi.fn(),
       getEventsForToday: vi.fn(),
+      getActionsReport: vi.fn().mockResolvedValue(''),
     } as any;
 
     databaseService = {

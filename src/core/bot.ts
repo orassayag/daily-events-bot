@@ -24,7 +24,10 @@ export class DailyEventsBot {
     this.logger.setContext('DailyEventsBot');
     this.config = this.validateEnv();
     this.telegramService.init(this.config.TOKEN, this.config.CHAT_ID);
-    this.eventFileService.init(settings.dailyFolderPath);
+    this.eventFileService.init(
+      settings.dailyFolderPath,
+      settings.actionsReportPath
+    );
     this.databaseService.init(settings.dbPath);
   }
 
@@ -60,7 +63,12 @@ export class DailyEventsBot {
         const dateInfo = DateUtils.getJerusalemDateInfo();
         const eventsText =
           await this.eventFileService.getEventsForToday(dateInfo);
-        console.log(`\n${eventsText}\n`);
+        const actionsReport = await this.eventFileService.getActionsReport();
+        const fullMessage = actionsReport
+          ? `${eventsText}\n${actionsReport}`
+          : eventsText;
+
+        console.log(`\n${fullMessage}\n`);
         return true;
       }
 
@@ -91,9 +99,13 @@ export class DailyEventsBot {
       );
       const eventsText =
         await this.eventFileService.getEventsForToday(dateInfo);
+      const actionsReport = await this.eventFileService.getActionsReport();
+      const fullMessage = actionsReport
+        ? `${eventsText}\n${actionsReport}`
+        : eventsText;
 
       this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 4. Sending message`);
-      await this.telegramService.sendMessage(eventsText);
+      await this.telegramService.sendMessage(fullMessage);
 
       this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 5. Marking date as sent`);
       await this.databaseService.markDateAsSent(dateInfo.formattedDate);

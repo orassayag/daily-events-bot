@@ -19,8 +19,51 @@ describe('EventFileService', () => {
       error: vi.fn(),
     };
     service = new EventFileService(logger);
-    service.init(folderPath);
+    service.init(folderPath, 'test-actions-report.txt');
     vi.clearAllMocks();
+  });
+
+  it('should extract actions report successfully', async () => {
+    const mockContent = `
+Some random content
+#FOR-BOT#
+Task 1 - 10:00
+Task 2 - 11:00
+`;
+
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockResolvedValue(mockContent);
+
+    const result = await service.getActionsReport();
+
+    expect(result).toContain('TASKS:');
+    expect(result).toContain('Task 1 - 10:00');
+    expect(result).toContain('Task 2 - 11:00');
+    expect(result).not.toContain('Some random content');
+    expect(result).not.toContain('#FOR-BOT#');
+  });
+
+  it('should return empty string if actions report file not found', async () => {
+    vi.mocked(fs.access).mockRejectedValue(new Error('Not found'));
+
+    const result = await service.getActionsReport();
+
+    expect(result).toBe('');
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Actions report file not found')
+    );
+  });
+
+  it('should return empty string if separator not found in actions report', async () => {
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockResolvedValue('No separator here');
+
+    const result = await service.getActionsReport();
+
+    expect(result).toBe('');
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Separator "#FOR-BOT#" not found')
+    );
   });
 
   it('should extract events for today successfully', async () => {

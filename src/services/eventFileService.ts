@@ -8,15 +8,18 @@ import { EMOJIS } from '../constants/index.js';
 @injectable()
 export class EventFileService {
   private folderPath: string = '';
+  private actionsReportPath: string = '';
 
   constructor(@inject(TYPES.Logger) private logger: Logger) {
     this.logger.setContext('EventFileService');
   }
 
-  public init(folderPath: string): void {
+  public init(folderPath: string, actionsReportPath: string): void {
     this.folderPath = folderPath;
+    this.actionsReportPath = actionsReportPath;
     this.logger.debug('EventFileService initialized', {
       folderPath: this.folderPath,
+      actionsReportPath: this.actionsReportPath,
     });
   }
 
@@ -160,6 +163,55 @@ export class EventFileService {
       `${EMOJIS.DATA.FILE} Successfully extracted ${resultLines.length} lines of events`
     );
     return resultLines.join('\n');
+  }
+
+  /**
+   * Reads the ACTIONS_REPORT.txt file and extracts the #FOR-BOT# section.
+   */
+  public async getActionsReport(): Promise<string> {
+    this.logger.debug(
+      `Fetching actions report from: ${this.actionsReportPath}`
+    );
+
+    try {
+      await fs.access(this.actionsReportPath);
+    } catch {
+      this.logger.warn(
+        `Actions report file not found at: ${this.actionsReportPath}. Skipping.`
+      );
+      return '';
+    }
+
+    const content = await fs.readFile(this.actionsReportPath, 'utf-8');
+    const lines = content.split(/\r?\n/);
+
+    const separator = '#FOR-BOT#';
+    const separatorIndex = lines.lastIndexOf(separator);
+
+    if (separatorIndex === -1) {
+      this.logger.warn(`Separator "${separator}" not found in actions report.`);
+      return '';
+    }
+
+    // Extract everything after the separator
+    const reportLines = lines.slice(separatorIndex + 1);
+
+    // Clean up empty lines at the beginning and end
+    while (reportLines.length > 0 && reportLines[0].trim() === '') {
+      reportLines.shift();
+    }
+    while (
+      reportLines.length > 0 &&
+      reportLines[reportLines.length - 1].trim() === ''
+    ) {
+      reportLines.pop();
+    }
+
+    if (reportLines.length === 0) {
+      return '';
+    }
+
+    return `\nTASKS:\n${reportLines.join('\n')}`;
   }
 
   /**
