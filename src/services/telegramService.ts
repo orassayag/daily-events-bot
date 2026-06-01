@@ -22,6 +22,7 @@ export class TelegramService {
   // How many times to check for network before giving up at startup
   private readonly NETWORK_CHECK_ATTEMPTS = 6;
   private readonly NETWORK_CHECK_DELAY = 5000; // 5 s between checks
+  private readonly MAX_MESSAGE_LENGTH = 4096;
 
   constructor(@inject(TYPES.Logger) private logger: Logger) {
     this.logger.setContext('TelegramService');
@@ -150,12 +151,21 @@ export class TelegramService {
 
   /** Sends a message via Telegram Bot API. */
   public async sendMessage(text: string): Promise<void> {
+    let messageText = text;
+
+    if (text.length > this.MAX_MESSAGE_LENGTH) {
+      this.logger.error(
+        `Message exceeds ${this.MAX_MESSAGE_LENGTH} characters (length: ${text.length}). Sending error message instead.`
+      );
+      messageText = 'ERROR: Daily message exceeds the 4,096-character limit.';
+    }
+
     this.logger.debug('Sending message to Telegram');
 
     const data = await this.apiCall<any>('sendMessage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: this.chatId, text }),
+      body: JSON.stringify({ chat_id: this.chatId, text: messageText }),
     });
 
     if (!data.ok) {

@@ -218,6 +218,27 @@ describe('TelegramService', () => {
         'Failed to send message: Forbidden'
       );
     });
+
+    it('should send error message if text exceeds 4096 characters', async () => {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce({
+        parsedData: { ok: true },
+      } as any);
+
+      const longMessage = 'a'.repeat(4097);
+      await telegramService.sendMessage(longMessage);
+
+      expect(fetchWithRetry).toHaveBeenCalledWith(
+        expect.stringContaining('sendMessage'),
+        expect.objectContaining({
+          body: expect.stringContaining(
+            'ERROR: Daily message exceeds the 4,096-character limit.'
+          ),
+        })
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Message exceeds 4096 characters')
+      );
+    });
   });
 
   describe('apiCall internal', () => {
