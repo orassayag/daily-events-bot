@@ -27,6 +27,7 @@ describe('DailyEventsBot', () => {
 
     telegramService = {
       init: vi.fn(),
+      waitForNetwork: vi.fn().mockResolvedValue(undefined),
       validateBot: vi.fn(),
       validateChat: vi.fn(),
       sendMessage: vi.fn(),
@@ -66,6 +67,7 @@ describe('DailyEventsBot', () => {
 
     expect(result).toBe(true);
     expect(databaseService.isDateSent).toHaveBeenCalled();
+    expect(telegramService.waitForNetwork).toHaveBeenCalled();
     expect(telegramService.validateBot).toHaveBeenCalledWith('test-bot');
     expect(telegramService.validateChat).toHaveBeenCalledWith('test-target');
     expect(eventFileService.getEventsForToday).toHaveBeenCalled();

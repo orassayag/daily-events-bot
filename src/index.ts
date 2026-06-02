@@ -10,15 +10,18 @@ export { DailyEventsBot };
 const logger = container.get<Logger>(TYPES.Logger);
 logger.setContext('Main');
 
-// Retry configuration
 const MAX_RETRIES = 10;
-const RETRY_DELAY_MS = 60000; // 1 minute
+const RETRY_DELAY_MS = 60000; // 1 minute between attempts
 
-// Global timeout: If the bot takes more than 15 minutes (10 retries * 1 min + buffer), force exit
-const GLOBAL_TIMEOUT_MS = 900000;
+// Increased from 15 min to 25 min to accommodate:
+//   - up to 2 min of network probing (12 × 10s)
+//   - up to 4 × 15s per Telegram API call with retries
+//   - 10 outer retry attempts × 1 min delay each
+const GLOBAL_TIMEOUT_MS = 1_500_000; // 25 minutes
+
 const timeoutHandle = setTimeout(async () => {
   logger.error(
-    `Bot execution timed out after ${GLOBAL_TIMEOUT_MS}ms. Force exiting.`
+    `${GLOBAL_TIMEOUT_MS / 60000} min global timeout reached. Force exiting.`
   );
   await logger.flush();
   process.exit(1);
@@ -35,19 +38,17 @@ export async function main(): Promise<void> {
 
       await bot.run();
 
-      // If result is true (sent) or false (already sent), we are done
+      // true = message sent, false = already sent today — either way, we're done
       clearTimeout(timeoutHandle);
       await logger.flush();
       process.exit(0);
     } catch (error: any) {
-      // Don't catch process.exit errors in tests
       if (error.message?.includes('process.exit')) throw error;
 
       logger.error(`Attempt ${attempt} failed: ${error.message}`);
 
       if (attempt === MAX_RETRIES) {
         logger.error('All retry attempts exhausted.');
-
         clearTimeout(timeoutHandle);
         logger.error('Fatal error during bot execution after retries', error);
         await logger.flush();
@@ -60,9 +61,8 @@ export async function main(): Promise<void> {
   }
 }
 
-// Only run if not in test environment
 if (process.env.NODE_ENV !== 'test') {
   main().catch(() => {
-    // Already handled in main
+    // Already handled inside main
   });
 }

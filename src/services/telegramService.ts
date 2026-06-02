@@ -2,11 +2,7 @@ import { injectable, inject } from 'inversify';
 import { TelegramBotInfo, TelegramChatInfo, TYPES } from '../types/index.js';
 import { Logger } from '../logging/index.js';
 import { EMOJIS } from '../constants/index.js';
-import {
-  fetchWithRetry,
-  FetchTimeoutError,
-  FetchExhaustedError,
-} from '../utils/index.js';
+import { fetchWithRetry, FetchExhaustedError, sleep } from '../utils/index.js';
 
 const TELEGRAM_BASE = 'https://api.telegram.org';
 
@@ -15,13 +11,13 @@ export class TelegramService {
   private token: string = '';
   private chatId: string = '';
 
-  private readonly DEFAULT_TIMEOUT = 15000; // 15 s per attempt
+  private readonly DEFAULT_TIMEOUT = 15000;
   private readonly DEFAULT_RETRIES = 3;
-  private readonly DEFAULT_RETRY_DELAY = 2000; // 2 s → 4 s → 8 s
+  private readonly DEFAULT_RETRY_DELAY = 2000;
 
-  // How many times to check for network before giving up at startup
-  private readonly NETWORK_CHECK_ATTEMPTS = 6;
-  private readonly NETWORK_CHECK_DELAY = 5000; // 5 s between checks
+  // Increased from 6×5s to 12×10s = up to 2 minutes of network probing
+  private readonly NETWORK_CHECK_ATTEMPTS = 12;
+  private readonly NETWORK_CHECK_DELAY = 10000;
   private readonly MAX_MESSAGE_LENGTH = 4096;
 
   constructor(@inject(TYPES.Logger) private logger: Logger) {
@@ -35,53 +31,50 @@ export class TelegramService {
   }
 
   // ---------------------------------------------------------------------------
-  // Network readiness — call once at startup before any other method
+  // Network readiness
   // ---------------------------------------------------------------------------
 
   /**
-   * Waits until the Telegram API endpoint is reachable.
+   * Waits until the Telegram API is reachable.
    *
-   * Windows Task Scheduler sessions often start before the network adapter is
-   * fully up. A plain fetch will stall or fail immediately rather than waiting.
-   * This method retries a lightweight HEAD-like probe until the host responds,
-   * giving the OS up to ~30 s to bring the interface online.
+   * Uses a plain fetch + AbortController per attempt instead of fetchWithRetry,
+   * to avoid internal retry logic conflicting with this outer probe loop.
+   * Any HTTP response (even 401) means the network and DNS are up.
    */
   public async waitForNetwork(): Promise<void> {
+    const probeUrl = `${TELEGRAM_BASE}/bot${this.token}/getMe`;
+    const probeTimeoutMs = 5000;
+
     this.logger.debug(
-      `Waiting for network (up to ${this.NETWORK_CHECK_ATTEMPTS} attempts × ${this.NETWORK_CHECK_DELAY / 1000}s)…`
+      `Probing network: up to ${this.NETWORK_CHECK_ATTEMPTS} attempts × ${this.NETWORK_CHECK_DELAY / 1000}s delay`
     );
 
     for (let attempt = 1; attempt <= this.NETWORK_CHECK_ATTEMPTS; attempt++) {
-      try {
-        // Use a short per-attempt timeout — we just need to know if the host
-        // is reachable, not wait a full 15 s each time.
-        const response = await fetchWithRetry<Response & { parsedData: any }>(
-          `${TELEGRAM_BASE}/bot${this.token}/getMe`,
-          {
-            timeoutMs: 5000,
-            retries: 0, // handled by our own loop here
-            parseJson: true,
-          }
-        );
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), probeTimeoutMs);
 
-        // Any HTTP response (even 401 for a bad token) means the network is up.
+      try {
+        const res = await fetch(probeUrl, { signal: controller.signal });
+        clearTimeout(timer);
+        // Any HTTP status means the network stack + DNS are working
         this.logger.debug(
-          `Network reachable on attempt ${attempt}/${this.NETWORK_CHECK_ATTEMPTS} (HTTP ${response.status})`
+          `Network ready on attempt ${attempt}/${this.NETWORK_CHECK_ATTEMPTS} (HTTP ${res.status})`
         );
         return;
       } catch (err: any) {
+        clearTimeout(timer);
         const reason =
-          err instanceof FetchTimeoutError
-            ? `timed out after 5s`
+          err?.name === 'AbortError'
+            ? `timed out after ${probeTimeoutMs / 1000}s`
             : (err?.message ?? String(err));
 
         this.logger.debug(
-          `Network check attempt ${attempt}/${this.NETWORK_CHECK_ATTEMPTS} failed: ${reason}`
+          `Network probe attempt ${attempt}/${this.NETWORK_CHECK_ATTEMPTS} failed: ${reason}`
         );
 
         if (attempt < this.NETWORK_CHECK_ATTEMPTS) {
           this.logger.debug(
-            `Waiting ${this.NETWORK_CHECK_DELAY / 1000}s before next check…`
+            `Waiting ${this.NETWORK_CHECK_DELAY / 1000}s before next probe…`
           );
           await sleep(this.NETWORK_CHECK_DELAY);
         }
@@ -90,8 +83,9 @@ export class TelegramService {
 
     throw new Error(
       `Telegram API (${TELEGRAM_BASE}) unreachable after ` +
-        `${this.NETWORK_CHECK_ATTEMPTS} network checks. ` +
-        `Check your internet connection or Windows firewall settings.`
+        `${this.NETWORK_CHECK_ATTEMPTS} network probes ` +
+        `(${(this.NETWORK_CHECK_ATTEMPTS * this.NETWORK_CHECK_DELAY) / 1000}s total). ` +
+        `Check your internet connection or firewall settings.`
     );
   }
 
@@ -102,46 +96,36 @@ export class TelegramService {
   /** Validates the bot username matches the expected BOT_USERNAME. */
   public async validateBot(expectedBotUsername: string): Promise<void> {
     this.logger.debug(`Validating bot: ${expectedBotUsername}`);
-
     const data = await this.apiCall<TelegramBotInfo>('getMe');
-
     this.logger.debug('Received bot info', { username: data.result?.username });
-
     if (!data.ok) {
       throw new Error(`Failed to get bot info: ${data.description}`);
     }
-
     const botUsername = data.result.username;
     if (botUsername !== expectedBotUsername) {
       throw new Error(
         `Bot validation failed: expected "${expectedBotUsername}", found "${botUsername}"`
       );
     }
-
     this.logger.debug('Bot validated successfully');
   }
 
   /** Validates the chat title/username matches the expected TARGET_USERNAME. */
   public async validateChat(expectedUsername: string): Promise<void> {
     this.logger.debug(`Validating chat: ${expectedUsername}`);
-
     const data = await this.apiCall<TelegramChatInfo>(
       `getChat?chat_id=${this.chatId}`
     );
-
     const chatTitle = data.result?.title || data.result?.username;
     this.logger.debug('Received chat info', { chatTitle });
-
     if (!data.ok) {
       throw new Error(`Failed to get chat info: ${data.description}`);
     }
-
     if (chatTitle !== expectedUsername) {
       throw new Error(
         `Chat validation failed: expected "${expectedUsername}", found "${chatTitle}"`
       );
     }
-
     this.logger.debug('Chat validated successfully');
   }
 
@@ -152,26 +136,21 @@ export class TelegramService {
   /** Sends a message via Telegram Bot API. */
   public async sendMessage(text: string): Promise<void> {
     let messageText = text;
-
     if (text.length > this.MAX_MESSAGE_LENGTH) {
       this.logger.error(
         `Message exceeds ${this.MAX_MESSAGE_LENGTH} characters (length: ${text.length}). Sending error message instead.`
       );
       messageText = 'ERROR: Daily message exceeds the 4,096-character limit.';
     }
-
     this.logger.debug('Sending message to Telegram');
-
     const data = await this.apiCall<any>('sendMessage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: this.chatId, text: messageText }),
     });
-
     if (!data.ok) {
       throw new Error(`Failed to send message: ${data.description}`);
     }
-
     this.logger.info(`${EMOJIS.TELEGRAM.MESSAGE} Message sent successfully`);
   }
 
@@ -188,9 +167,7 @@ export class TelegramService {
     init: RequestInit = {}
   ): Promise<T> {
     const url = `${TELEGRAM_BASE}/bot${this.token}/${endpoint}`;
-
     this.logger.debug(`Calling Telegram API: ${endpoint}`);
-
     try {
       const response = await fetchWithRetry<Response & { parsedData: T }>(url, {
         ...init,
@@ -204,7 +181,6 @@ export class TelegramService {
           );
         },
       });
-
       return response.parsedData;
     } catch (err: any) {
       // Re-wrap with context so upstream callers see which endpoint failed.
@@ -212,13 +188,8 @@ export class TelegramService {
         err instanceof FetchExhaustedError
           ? `Telegram API call exhausted retries [${endpoint}]: ${err.cause?.message}`
           : `Telegram API call failed [${endpoint}]: ${err.message}`;
-
       this.logger.error(message, err);
       throw new Error(message);
     }
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

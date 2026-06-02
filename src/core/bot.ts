@@ -67,7 +67,6 @@ export class DailyEventsBot {
         const fullMessage = actionsReport
           ? `${eventsText}\n${actionsReport}`
           : eventsText;
-
         console.log(`\n${fullMessage}\n`);
         return true;
       }
@@ -90,12 +89,18 @@ export class DailyEventsBot {
         return false;
       }
 
-      this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 2. Validating bot and chat`);
+      // ── NEW: wait for the network before making any Telegram API calls ──
+      this.logger.info(
+        `${EMOJIS.ACTIONS.PROCESS} 2. Waiting for network connectivity`
+      );
+      await this.telegramService.waitForNetwork();
+
+      this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 3. Validating bot and chat`);
       await this.telegramService.validateBot(this.config.BOT_USERNAME);
       await this.telegramService.validateChat(this.config.TARGET_USERNAME);
 
       this.logger.info(
-        `${EMOJIS.ACTIONS.PROCESS} 3. Fetching events from file`
+        `${EMOJIS.ACTIONS.PROCESS} 4. Fetching events from file`
       );
       const eventsText =
         await this.eventFileService.getEventsForToday(dateInfo);
@@ -104,10 +109,10 @@ export class DailyEventsBot {
         ? `${eventsText}\n${actionsReport}`
         : eventsText;
 
-      this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 4. Sending message`);
+      this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 5. Sending message`);
       await this.telegramService.sendMessage(fullMessage);
 
-      this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 5. Marking date as sent`);
+      this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 6. Marking date as sent`);
       await this.databaseService.markDateAsSent(dateInfo.formattedDate);
 
       this.logger.info(`${EMOJIS.STATUS.SUCCESS} Success: Message sent`);

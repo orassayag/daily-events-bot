@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TelegramService } from '../services/index.js';
 import { Logger } from '../logging/index.js';
-import {
-  fetchWithRetry,
-  FetchTimeoutError,
-  FetchExhaustedError,
-} from '../utils/index.js';
+import { fetchWithRetry, FetchExhaustedError } from '../utils/index.js';
 
 vi.mock('../utils/index.js', () => ({
   fetchWithRetry: vi.fn(),
@@ -33,6 +29,8 @@ describe('TelegramService', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    // Mock global fetch for waitForNetwork
+    global.fetch = vi.fn();
     mockLogger = {
       setContext: vi.fn(),
       debug: vi.fn(),
@@ -42,7 +40,7 @@ describe('TelegramService', () => {
     } as any;
     telegramService = new TelegramService(mockLogger);
     telegramService.init('test-token', 'test-chat-id');
-    vi.clearAllMocks();
+    vi.resetAllMocks(); // Use reset instead of clear to clear mock implementations
   });
 
   afterEach(() => {
@@ -51,14 +49,14 @@ describe('TelegramService', () => {
 
   describe('waitForNetwork', () => {
     it('should return if network is reachable on first attempt', async () => {
-      vi.mocked(fetchWithRetry).mockResolvedValueOnce({ status: 200 } as any);
+      vi.mocked(fetch).mockResolvedValueOnce({ status: 200 } as any);
 
       await telegramService.waitForNetwork();
-      expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+      expect(fetch).toHaveBeenCalledTimes(1);
     });
 
     it('should retry if network is not reachable initially', async () => {
-      vi.mocked(fetchWithRetry)
+      vi.mocked(fetch)
         .mockRejectedValueOnce(new Error('Network down'))
         .mockResolvedValueOnce({ status: 200 } as any);
 
@@ -68,15 +66,16 @@ describe('TelegramService', () => {
       await vi.runAllTimersAsync();
 
       await promise;
-      expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+      expect(fetch).toHaveBeenCalledTimes(2);
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        expect.stringContaining('Network reachable on attempt 2')
+        expect.stringContaining('Network ready on attempt 2/12 (HTTP 200)')
       );
     });
 
     it('should handle FetchTimeoutError during network check', async () => {
-      vi.mocked(fetchWithRetry)
-        .mockRejectedValueOnce(new FetchTimeoutError('timed out'))
+      // fetch doesn't throw FetchTimeoutError, it throws AbortError when aborted
+      vi.mocked(fetch)
+        .mockRejectedValueOnce({ name: 'AbortError' })
         .mockResolvedValueOnce({ status: 200 } as any);
 
       const promise = telegramService.waitForNetwork();
@@ -89,22 +88,20 @@ describe('TelegramService', () => {
     });
 
     it('should throw error after all network check attempts fail', async () => {
-      vi.mocked(fetchWithRetry).mockRejectedValue(
-        new Error('Persistent network error')
-      );
+      vi.mocked(fetch).mockRejectedValue(new Error('Persistent network error'));
 
       const promise = telegramService.waitForNetwork();
 
       await Promise.all([
         vi.runAllTimersAsync(),
-        expect(promise).rejects.toThrow(/unreachable after 6 network checks/),
+        expect(promise).rejects.toThrow(/unreachable after 12 network probes/),
       ]);
 
-      expect(fetchWithRetry).toHaveBeenCalledTimes(6);
+      expect(fetch).toHaveBeenCalledTimes(12);
     });
 
     it('should handle non-Error objects in waitForNetwork catch', async () => {
-      vi.mocked(fetchWithRetry)
+      vi.mocked(fetch)
         .mockRejectedValueOnce('string error')
         .mockResolvedValueOnce({ status: 200 } as any);
 
@@ -118,7 +115,7 @@ describe('TelegramService', () => {
     });
 
     it('should handle error without message in waitForNetwork catch', async () => {
-      vi.mocked(fetchWithRetry)
+      vi.mocked(fetch)
         .mockRejectedValueOnce({})
         .mockResolvedValueOnce({ status: 200 } as any);
 
@@ -148,7 +145,7 @@ describe('TelegramService', () => {
       } as any);
 
       await expect(telegramService.validateBot('any')).rejects.toThrow(
-        'Failed to get bot info: Not Authorized'
+        /Failed to get bot info: Not Authorized/
       );
     });
 
@@ -215,7 +212,7 @@ describe('TelegramService', () => {
       } as any);
 
       await expect(telegramService.sendMessage('Hello')).rejects.toThrow(
-        'Failed to send message: Forbidden'
+        /Failed to send message: Forbidden/
       );
     });
 
@@ -252,7 +249,9 @@ describe('TelegramService', () => {
 
       await telegramService.sendMessage('test');
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        expect.stringContaining('Retrying sendMessage (attempt 1/3)')
+        expect.stringContaining(
+          'Retrying sendMessage (attempt 1/3): Attempt 1 failed'
+        )
       );
     });
 
