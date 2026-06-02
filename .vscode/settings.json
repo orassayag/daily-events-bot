@@ -1,5 +1,13 @@
 {
-  "cSpell.words": ["Assayag", "msvc", "newbot", "orassayag", "userinfobot"],
+  "cSpell.words": [
+    "Assayag",
+    "maxtimeout",
+    "mintimeout",
+    "msvc",
+    "newbot",
+    "orassayag",
+    "userinfobot"
+  ],
   "cSpell.ignorePaths": [
     "coverage",
     "node_modules",
