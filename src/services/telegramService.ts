@@ -42,7 +42,13 @@ export class TelegramService {
    * Any HTTP response (even 401) means the network and DNS are up.
    */
   public async waitForNetwork(): Promise<void> {
-    const probeUrl = `${TELEGRAM_BASE}/bot${this.token}/getMe`;
+    // Probe Telegram's IP directly to bypass DNS hang on wake.
+    // 149.154.167.220 is a stable Telegram API server IP.
+    // We still also try the hostname so either path can succeed.
+    const probeUrls = [
+      `${TELEGRAM_BASE}/bot${this.token}/getMe`,
+      `https://149.154.167.220/bot${this.token}/getMe`,
+    ];
     const probeTimeoutMs = 5000;
 
     this.logger.debug(
@@ -50,43 +56,60 @@ export class TelegramService {
     );
 
     for (let attempt = 1; attempt <= this.NETWORK_CHECK_ATTEMPTS; attempt++) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), probeTimeoutMs);
+      const success = await this.probeOnce(probeUrls, probeTimeoutMs);
 
-      try {
-        const res = await fetch(probeUrl, { signal: controller.signal });
-        clearTimeout(timer);
-        // Any HTTP status means the network stack + DNS are working
+      if (success) {
         this.logger.debug(
-          `Network ready on attempt ${attempt}/${this.NETWORK_CHECK_ATTEMPTS} (HTTP ${res.status})`
+          `Network ready on attempt ${attempt}/${this.NETWORK_CHECK_ATTEMPTS}`
         );
         return;
-      } catch (err: any) {
-        clearTimeout(timer);
-        const reason =
-          err?.name === 'AbortError'
-            ? `timed out after ${probeTimeoutMs / 1000}s`
-            : (err?.message ?? String(err));
+      }
 
+      this.logger.debug(
+        `Network probe attempt ${attempt}/${this.NETWORK_CHECK_ATTEMPTS} failed`
+      );
+
+      if (attempt < this.NETWORK_CHECK_ATTEMPTS) {
         this.logger.debug(
-          `Network probe attempt ${attempt}/${this.NETWORK_CHECK_ATTEMPTS} failed: ${reason}`
+          `Waiting ${this.NETWORK_CHECK_DELAY / 1000}s before next probe…`
         );
-
-        if (attempt < this.NETWORK_CHECK_ATTEMPTS) {
-          this.logger.debug(
-            `Waiting ${this.NETWORK_CHECK_DELAY / 1000}s before next probe…`
-          );
-          await sleep(this.NETWORK_CHECK_DELAY);
-        }
+        await sleep(this.NETWORK_CHECK_DELAY);
       }
     }
 
     throw new Error(
-      `Telegram API (${TELEGRAM_BASE}) unreachable after ` +
-        `${this.NETWORK_CHECK_ATTEMPTS} network probes ` +
-        `(${(this.NETWORK_CHECK_ATTEMPTS * this.NETWORK_CHECK_DELAY) / 1000}s total). ` +
+      `Telegram API unreachable after ${this.NETWORK_CHECK_ATTEMPTS} network probes. ` +
         `Check your internet connection or firewall settings.`
     );
+  }
+
+  /**
+   * Tries each probe URL in parallel. Returns true if any responds within
+   * timeoutMs. Uses Promise.race() with a hard setTimeout as a fallback
+   * deadline — this works even when AbortController is ignored by the OS
+   * TCP stack during post-wake hangs.
+   */
+  private async probeOnce(urls: string[], timeoutMs: number): Promise<boolean> {
+    const hardDeadline = new Promise<false>((resolve) =>
+      setTimeout(() => resolve(false), timeoutMs + 500)
+    );
+
+    const probes = urls.map(async (url) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        await fetch(url, { signal: controller.signal });
+        clearTimeout(timer);
+        return true;
+      } catch {
+        clearTimeout(timer);
+        return false;
+      }
+    });
+
+    // Race all probes + hard deadline — whoever resolves first wins
+    const result = await Promise.race([...probes, hardDeadline]);
+    return result === true;
   }
 
   // ---------------------------------------------------------------------------
