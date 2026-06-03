@@ -52,15 +52,14 @@ describe('TelegramService', () => {
       vi.mocked(fetch).mockResolvedValue({ status: 200 } as any);
 
       await telegramService.waitForNetwork();
-      // Now probes 2 URLs per attempt (hostname and IP)
-      expect(fetch).toHaveBeenCalledTimes(2);
+      // Now probes only 1 URL per attempt
+      expect(fetch).toHaveBeenCalledTimes(1);
     });
 
     it('should retry if network is not reachable initially', async () => {
       vi.mocked(fetch)
-        .mockRejectedValueOnce(new Error('Network down')) // First URL fails
-        .mockRejectedValueOnce(new Error('Network down')) // Second URL fails
-        .mockResolvedValueOnce({ status: 200 } as any); // Third URL (second attempt) succeeds
+        .mockRejectedValueOnce(new Error('Network down')) // Attempt 1 fails
+        .mockResolvedValueOnce({ status: 200 } as any); // Attempt 2 succeeds
 
       const promise = telegramService.waitForNetwork();
 
@@ -68,8 +67,8 @@ describe('TelegramService', () => {
       await vi.runAllTimersAsync();
 
       await promise;
-      // 2 URLs in attempt 1 + at least 1 URL in attempt 2 (parallel)
-      expect(fetch).toHaveBeenCalledTimes(4);
+      // 1 URL in attempt 1 + 1 URL in attempt 2
+      expect(fetch).toHaveBeenCalledTimes(2);
       expect(mockLogger.debug).toHaveBeenCalledWith(
         expect.stringContaining('Network ready on attempt 2/12')
       );
@@ -79,7 +78,6 @@ describe('TelegramService', () => {
       // fetch doesn't throw FetchTimeoutError, it throws AbortError when aborted
       vi.mocked(fetch)
         .mockRejectedValueOnce({ name: 'AbortError' })
-        .mockRejectedValueOnce(new Error('DNS failure'))
         .mockResolvedValueOnce({ status: 200 } as any);
 
       const promise = telegramService.waitForNetwork();
@@ -101,14 +99,13 @@ describe('TelegramService', () => {
         expect(promise).rejects.toThrow(/unreachable after 12 network probes/),
       ]);
 
-      // 12 attempts * 2 URLs per attempt
-      expect(fetch).toHaveBeenCalledTimes(24);
+      // 12 attempts * 1 URL per attempt
+      expect(fetch).toHaveBeenCalledTimes(12);
     });
 
     it('should handle non-Error objects in probe catch', async () => {
       vi.mocked(fetch)
         .mockRejectedValueOnce('string error')
-        .mockRejectedValueOnce('another error')
         .mockResolvedValueOnce({ status: 200 } as any);
 
       const promise = telegramService.waitForNetwork();
@@ -122,7 +119,6 @@ describe('TelegramService', () => {
 
     it('should handle error without message in probe catch', async () => {
       vi.mocked(fetch)
-        .mockRejectedValueOnce({})
         .mockRejectedValueOnce({})
         .mockResolvedValueOnce({ status: 200 } as any);
 

@@ -45,10 +45,7 @@ export class TelegramService {
     // Probe Telegram's IP directly to bypass DNS hang on wake.
     // 149.154.167.220 is a stable Telegram API server IP.
     // We still also try the hostname so either path can succeed.
-    const probeUrls = [
-      `${TELEGRAM_BASE}/bot${this.token}/getMe`,
-      `https://149.154.167.220/bot${this.token}/getMe`,
-    ];
+    const probeUrls = [`${TELEGRAM_BASE}/bot${this.token}/getMe`];
     const probeTimeoutMs = 5000;
 
     this.logger.debug(
@@ -107,7 +104,6 @@ export class TelegramService {
       }
     });
 
-    // Race all probes + hard deadline — whoever resolves first wins
     const result = await Promise.race([...probes, hardDeadline]);
     return result === true;
   }
