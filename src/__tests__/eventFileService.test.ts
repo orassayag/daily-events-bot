@@ -43,6 +43,36 @@ Task 2 - 11:00
     expect(result).not.toContain('#FOR-BOT#');
   });
 
+  it('should shorten names in actions report successfully', async () => {
+    const mockContent = `
+#FOR-BOT#
+Node Watchdog = OK
+Contacts Scan Maintainer = FAILED
+Backups Manager = OK
+Auto Packages Updater = OK
+Daily Events Bot = OK
+Sync Daily Documents = OK
+Repos Scan Reporter = OK
+Global Package Updater = OK
+Series & Movies = OK
+`;
+
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockResolvedValue(mockContent);
+
+    const result = await service.getActionsReport();
+
+    expect(result).toContain('NodeWatchdog = OK');
+    expect(result).toContain('ContactsScanner = FAILED');
+    expect(result).toContain('BackupsManager = OK');
+    expect(result).toContain('A_PackagesUpdater = OK');
+    expect(result).toContain('DailyEventsBot = OK');
+    expect(result).toContain('SyncDailyDocs = OK');
+    expect(result).toContain('ReposReporter = OK');
+    expect(result).toContain('G_PackagesUpdater = OK');
+    expect(result).toContain('Series&Movies = OK');
+  });
+
   it('should return empty string if actions report file not found', async () => {
     vi.mocked(fs.access).mockRejectedValue(new Error('Not found'));
 

@@ -26,7 +26,7 @@ describe('DatabaseService', () => {
 
   it('should return false if date is not in sent list', async () => {
     vi.mocked(fs.readFile).mockResolvedValue(
-      JSON.stringify({ sent: ['2026-05-01'] })
+      JSON.stringify({ sent: [{ date: '2026-05-01', timestamp: 12345 }] })
     );
 
     const result = await service.isDateSent('2026-05-04');
@@ -35,11 +35,34 @@ describe('DatabaseService', () => {
 
   it('should return true if date is in sent list', async () => {
     vi.mocked(fs.readFile).mockResolvedValue(
+      JSON.stringify({ sent: [{ date: '2026-05-04', timestamp: 12345 }] })
+    );
+
+    const result = await service.isDateSent('2026-05-04');
+    expect(result).toBe(true);
+  });
+
+  it('should support legacy string format in isDateSent', async () => {
+    vi.mocked(fs.readFile).mockResolvedValue(
       JSON.stringify({ sent: ['2026-05-04'] })
     );
 
     const result = await service.isDateSent('2026-05-04');
     expect(result).toBe(true);
+  });
+
+  it('should get sent records for a specific date', async () => {
+    const records = [
+      { date: '2026-05-04', timestamp: 1000 },
+      { date: '2026-05-04', timestamp: 2000 },
+      { date: '2026-05-01', timestamp: 500 },
+    ];
+    vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify({ sent: records }));
+
+    const result = await service.getSentRecords('2026-05-04');
+    expect(result).toHaveLength(2);
+    expect(result[0].timestamp).toBe(1000);
+    expect(result[1].timestamp).toBe(2000);
   });
 
   it('should return false and handle error if file does not exist', async () => {
@@ -52,27 +75,20 @@ describe('DatabaseService', () => {
     });
   });
 
-  it('should mark date as sent if not already present', async () => {
-    vi.mocked(fs.readFile).mockResolvedValue(
-      JSON.stringify({ sent: ['2026-05-01'] })
-    );
+  it('should mark date as sent', async () => {
+    vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify({ sent: [] }));
 
     await service.markDateAsSent('2026-05-04');
 
     expect(fs.writeFile).toHaveBeenCalledWith(
       dbPath,
-      expect.stringContaining('2026-05-04'),
+      expect.stringContaining('"date": "2026-05-04"'),
       'utf-8'
     );
-  });
-
-  it('should not write to file if date is already marked as sent', async () => {
-    vi.mocked(fs.readFile).mockResolvedValue(
-      JSON.stringify({ sent: ['2026-05-04'] })
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      dbPath,
+      expect.stringContaining('"timestamp":'),
+      'utf-8'
     );
-
-    await service.markDateAsSent('2026-05-04');
-
-    expect(fs.writeFile).not.toHaveBeenCalled();
   });
 });

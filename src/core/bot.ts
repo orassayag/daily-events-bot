@@ -79,12 +79,35 @@ export class DailyEventsBot {
       this.logger.info(
         `${EMOJIS.ACTIONS.PROCESS} 1. Checking if message for today already sent`
       );
-      const alreadySent = await this.databaseService.isDateSent(
+      const sentRecords = await this.databaseService.getSentRecords(
         dateInfo.formattedDate
       );
-      if (alreadySent) {
+
+      let prefix = '';
+      if (sentRecords.length === 0) {
         this.logger.info(
-          `${EMOJIS.STATUS.SUCCESS} Validation: A message for today (${dateInfo.formattedDate}) was already sent. Nothing to do.`
+          `${EMOJIS.STATUS.INFO} No messages sent today. Preparing MORNING message.`
+        );
+        prefix = '@MORNING@\n';
+      } else if (sentRecords.length === 1) {
+        const lastSent = sentRecords[0].timestamp;
+        const now = Date.now();
+        const hoursPassed = (now - lastSent) / (1000 * 60 * 60);
+
+        if (hoursPassed < 9) {
+          this.logger.info(
+            `${EMOJIS.STATUS.SUCCESS} Validation: One message already sent today, but only ${hoursPassed.toFixed(1)} hours passed (minimum 9 required). Nothing to do.`
+          );
+          return false;
+        }
+
+        this.logger.info(
+          `${EMOJIS.STATUS.INFO} One message sent today and >9 hours passed. Preparing EVENING message.`
+        );
+        prefix = '@EVENING@\n';
+      } else {
+        this.logger.info(
+          `${EMOJIS.STATUS.SUCCESS} Validation: Maximum 2 messages for today (${dateInfo.formattedDate}) already sent. Nothing to do.`
         );
         return false;
       }
@@ -105,9 +128,11 @@ export class DailyEventsBot {
       const eventsText =
         await this.eventFileService.getEventsForToday(dateInfo);
       const actionsReport = await this.eventFileService.getActionsReport();
-      const fullMessage = actionsReport
+      const rawMessage = actionsReport
         ? `${eventsText}\n${actionsReport}`
         : eventsText;
+
+      const fullMessage = `${prefix}${rawMessage}`;
 
       this.logger.info(`${EMOJIS.ACTIONS.PROCESS} 5. Sending message`);
       await this.telegramService.sendMessage(fullMessage);

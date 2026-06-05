@@ -2,7 +2,12 @@ import { injectable, inject } from 'inversify';
 import { TelegramBotInfo, TelegramChatInfo, TYPES } from '../types/index.js';
 import { Logger } from '../logging/index.js';
 import { EMOJIS } from '../constants/index.js';
-import { fetchWithRetry, FetchExhaustedError, sleep } from '../utils/index.js';
+import {
+  fetchWithRetry,
+  FetchExhaustedError,
+  sleep,
+  maskCreditCards,
+} from '../utils/index.js';
 
 const TELEGRAM_BASE = 'https://api.telegram.org';
 
@@ -154,10 +159,10 @@ export class TelegramService {
 
   /** Sends a message via Telegram Bot API. */
   public async sendMessage(text: string): Promise<void> {
-    let messageText = text;
-    if (text.length > this.MAX_MESSAGE_LENGTH) {
+    let messageText = maskCreditCards(text);
+    if (messageText.length > this.MAX_MESSAGE_LENGTH) {
       this.logger.error(
-        `Message exceeds ${this.MAX_MESSAGE_LENGTH} characters (length: ${text.length}). Sending error message instead.`
+        `Message exceeds ${this.MAX_MESSAGE_LENGTH} characters (length: ${messageText.length}). Sending error message instead.`
       );
       messageText = 'ERROR: Daily message exceeds the 4,096-character limit.';
     }

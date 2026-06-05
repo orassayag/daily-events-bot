@@ -21,6 +21,9 @@ vi.mock('../utils/index.js', () => ({
     }
   },
   sleep: vi.fn().mockResolvedValue(undefined),
+  maskCreditCards: vi.fn((text) =>
+    text.replace(/\b\d{4}[- ]\d{4}[- ]\d{4}-(\d{4})\b/g, '****-****-****-$1')
+  ),
 }));
 
 describe('TelegramService', () => {
@@ -206,6 +209,22 @@ describe('TelegramService', () => {
       );
       expect(mockLogger.info).toHaveBeenCalledWith(
         expect.stringContaining('Message sent successfully')
+      );
+    });
+
+    it('should mask credit card numbers in the message', async () => {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce({
+        parsedData: { ok: true },
+      } as any);
+
+      const message = 'Credit card: 1111-1111-1111-1111';
+      await telegramService.sendMessage(message);
+
+      expect(fetchWithRetry).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          body: expect.stringContaining('****-****-****-1111'),
+        })
       );
     });
 

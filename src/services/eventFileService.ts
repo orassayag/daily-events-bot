@@ -10,6 +10,18 @@ export class EventFileService {
   private folderPath: string = '';
   private actionsReportPath: string = '';
 
+  private readonly BOT_NAME_MAPPING: Record<string, string> = {
+    'Node Watchdog': 'NodeWatchdog',
+    'Contacts Scan Maintainer': 'ContactsScanner',
+    'Backups Manager': 'BackupsManager',
+    'Auto Packages Updater': 'A_PackagesUpdater',
+    'Daily Events Bot': 'DailyEventsBot',
+    'Sync Daily Documents': 'SyncDailyDocs',
+    'Repos Scan Reporter': 'ReposReporter',
+    'Global Package Updater': 'G_PackagesUpdater',
+    'Series & Movies': 'Series&Movies',
+  };
+
   constructor(@inject(TYPES.Logger) private logger: Logger) {
     this.logger.setContext('EventFileService');
   }
@@ -211,7 +223,21 @@ export class EventFileService {
       return '';
     }
 
-    return `\nTASKS:\n${reportLines.join('\n')}`;
+    // Replace long names with shorter versions
+    const processedLines = reportLines.map((line) => {
+      let updatedLine = line;
+      for (const [longName, shortName] of Object.entries(
+        this.BOT_NAME_MAPPING
+      )) {
+        // Use regex with word boundary to avoid partial replacements if names are similar
+        // but since these are specific names, simple replacement or boundary-checked replacement is better.
+        // We'll replace all occurrences of the long name in the line.
+        updatedLine = updatedLine.split(longName).join(shortName);
+      }
+      return updatedLine;
+    });
+
+    return `\nTASKS:\n${processedLines.join('\n')}`;
   }
 
   /**

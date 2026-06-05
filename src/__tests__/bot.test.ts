@@ -41,7 +41,7 @@ describe('DailyEventsBot', () => {
 
     databaseService = {
       init: vi.fn(),
-      isDateSent: vi.fn().mockResolvedValue(false),
+      getSentRecords: vi.fn().mockResolvedValue([]),
       markDateAsSent: vi.fn(),
     } as any;
 
@@ -66,22 +66,54 @@ describe('DailyEventsBot', () => {
     const result = await bot.run();
 
     expect(result).toBe(true);
-    expect(databaseService.isDateSent).toHaveBeenCalled();
+    expect(databaseService.getSentRecords).toHaveBeenCalled();
     expect(telegramService.waitForNetwork).toHaveBeenCalled();
     expect(telegramService.validateBot).toHaveBeenCalledWith('test-bot');
     expect(telegramService.validateChat).toHaveBeenCalledWith('test-target');
     expect(eventFileService.getEventsForToday).toHaveBeenCalled();
-    expect(telegramService.sendMessage).toHaveBeenCalledWith('Events text');
+    expect(telegramService.sendMessage).toHaveBeenCalledWith(
+      expect.stringContaining('@MORNING@\nEvents text')
+    );
     expect(databaseService.markDateAsSent).toHaveBeenCalled();
   });
 
-  it('should return false if message for today was already sent', async () => {
-    vi.mocked(databaseService.isDateSent).mockResolvedValue(true);
+  it('should return false if message for today was already sent twice', async () => {
+    vi.mocked(databaseService.getSentRecords).mockResolvedValue([
+      { date: '2026-05-04', timestamp: Date.now() - 10 * 3600 * 1000 },
+      { date: '2026-05-04', timestamp: Date.now() - 1 * 3600 * 1000 },
+    ]);
 
     const result = await bot.run();
 
     expect(result).toBe(false);
     expect(telegramService.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('should return false if message for today was sent once but < 9 hours passed', async () => {
+    vi.mocked(databaseService.getSentRecords).mockResolvedValue([
+      { date: '2026-05-04', timestamp: Date.now() - 5 * 3600 * 1000 },
+    ]);
+
+    const result = await bot.run();
+
+    expect(result).toBe(false);
+    expect(telegramService.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('should send EVENING message if one sent and > 9 hours passed', async () => {
+    vi.mocked(databaseService.getSentRecords).mockResolvedValue([
+      { date: '2026-05-04', timestamp: Date.now() - 10 * 3600 * 1000 },
+    ]);
+    vi.mocked(eventFileService.getEventsForToday).mockResolvedValue(
+      'Events text'
+    );
+
+    const result = await bot.run();
+
+    expect(result).toBe(true);
+    expect(telegramService.sendMessage).toHaveBeenCalledWith(
+      expect.stringContaining('@EVENING@\nEvents text')
+    );
   });
 
   it('should throw error if environment variables are missing', () => {

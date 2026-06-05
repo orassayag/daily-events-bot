@@ -5,6 +5,15 @@ import { TYPES } from '../types/index.js';
 import { Logger } from '../logging/index.js';
 import { EMOJIS } from '../constants/index.js';
 
+export interface SentRecord {
+  date: string;
+  timestamp: number;
+}
+
+interface DbData {
+  sent: (string | SentRecord)[];
+}
+
 @injectable()
 export class DatabaseService {
   private dbPath: string = '';
@@ -19,34 +28,48 @@ export class DatabaseService {
   }
 
   /**
-   * Checks if a date has already been recorded as sent.
+   * Gets all sent records for a specific date.
+   */
+  public async getSentRecords(date: string): Promise<SentRecord[]> {
+    this.logger.debug(`Getting sent records for date: ${date}`);
+    const data = await this.readDb();
+
+    return data.sent.filter(
+      (record): record is SentRecord =>
+        typeof record !== 'string' && record.date === date
+    );
+  }
+
+  /**
+   * Checks if a date has already been recorded as sent (legacy support).
    */
   public async isDateSent(date: string): Promise<boolean> {
-    this.logger.debug(`Checking if date is already sent: ${date}`);
+    this.logger.debug(`Checking if date is already sent (legacy): ${date}`);
     const data = await this.readDb();
-    const isSent = data.sent.includes(date);
+    const isSent = data.sent.some((record) =>
+      typeof record === 'string' ? record === date : record.date === date
+    );
     this.logger.debug(`Is date sent: ${isSent}`);
     return isSent;
   }
 
   /**
-   * Adds a date to the sent list.
+   * Adds a date to the sent list with current timestamp.
    */
   public async markDateAsSent(date: string): Promise<void> {
-    this.logger.debug(`Marking date as sent: ${date}`);
+    const timestamp = Date.now();
+    this.logger.debug(`Marking date as sent: ${date} at ${timestamp}`);
     const data = await this.readDb();
-    if (!data.sent.includes(date)) {
-      data.sent.push(date);
-      await this.writeDb(data);
-      this.logger.info(
-        `${EMOJIS.DATA.DATABASE} Date ${date} marked as sent in database`
-      );
-    } else {
-      this.logger.debug(`Date ${date} was already marked as sent`);
-    }
+
+    data.sent.push({ date, timestamp });
+    await this.writeDb(data);
+
+    this.logger.info(
+      `${EMOJIS.DATA.DATABASE} Date ${date} marked as sent at ${new Date(timestamp).toISOString()}`
+    );
   }
 
-  private async readDb(): Promise<{ sent: string[] }> {
+  private async readDb(): Promise<DbData> {
     try {
       this.logger.debug(`Reading database from: ${this.dbPath}`);
       // Ensure directory exists
@@ -64,7 +87,7 @@ export class DatabaseService {
     }
   }
 
-  private async writeDb(data: { sent: string[] }): Promise<void> {
+  private async writeDb(data: DbData): Promise<void> {
     this.logger.debug(`Writing to database: ${this.dbPath}`);
     await fs.writeFile(this.dbPath, JSON.stringify(data, null, 2), 'utf-8');
   }
