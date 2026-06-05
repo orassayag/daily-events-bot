@@ -26,7 +26,10 @@ export class DailyEventsBot {
     this.telegramService.init(this.config.TOKEN, this.config.CHAT_ID);
     this.eventFileService.init(
       settings.dailyFolderPath,
-      settings.actionsReportPath
+      settings.actionsReportPath,
+      settings.scanContactsReportPath,
+      settings.backupReportPath,
+      settings.projectsUpdatesReportPath
     );
     this.databaseService.init(settings.dbPath);
   }
@@ -64,9 +67,13 @@ export class DailyEventsBot {
         const eventsText =
           await this.eventFileService.getEventsForToday(dateInfo);
         const actionsReport = await this.eventFileService.getActionsReport();
-        const fullMessage = actionsReport
-          ? `${eventsText}\n${actionsReport}`
-          : eventsText;
+        const tasksDetailsReport =
+          await this.eventFileService.getTasksDetailsReport();
+
+        let fullMessage = eventsText;
+        if (actionsReport) fullMessage += `\n${actionsReport}`;
+        if (tasksDetailsReport) fullMessage += `\n${tasksDetailsReport}`;
+
         console.log(`\n${fullMessage}\n`);
         return true;
       }
@@ -128,9 +135,12 @@ export class DailyEventsBot {
       const eventsText =
         await this.eventFileService.getEventsForToday(dateInfo);
       const actionsReport = await this.eventFileService.getActionsReport();
-      const rawMessage = actionsReport
-        ? `${eventsText}\n${actionsReport}`
-        : eventsText;
+      const tasksDetailsReport =
+        await this.eventFileService.getTasksDetailsReport();
+
+      let rawMessage = eventsText;
+      if (actionsReport) rawMessage += `\n${actionsReport}`;
+      if (tasksDetailsReport) rawMessage += `\n${tasksDetailsReport}`;
 
       const fullMessage = `${prefix}${rawMessage}`;
 

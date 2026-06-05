@@ -9,6 +9,9 @@ import { EMOJIS } from '../constants/index.js';
 export class EventFileService {
   private folderPath: string = '';
   private actionsReportPath: string = '';
+  private scanContactsReportPath: string = '';
+  private backupReportPath: string = '';
+  private projectsUpdatesReportPath: string = '';
 
   private readonly BOT_NAME_MAPPING: Record<string, string> = {
     'Node Watchdog': 'NodeWatchdog',
@@ -26,12 +29,24 @@ export class EventFileService {
     this.logger.setContext('EventFileService');
   }
 
-  public init(folderPath: string, actionsReportPath: string): void {
+  public init(
+    folderPath: string,
+    actionsReportPath: string,
+    scanContactsReportPath: string,
+    backupReportPath: string,
+    projectsUpdatesReportPath: string
+  ): void {
     this.folderPath = folderPath;
     this.actionsReportPath = actionsReportPath;
+    this.scanContactsReportPath = scanContactsReportPath;
+    this.backupReportPath = backupReportPath;
+    this.projectsUpdatesReportPath = projectsUpdatesReportPath;
     this.logger.debug('EventFileService initialized', {
       folderPath: this.folderPath,
       actionsReportPath: this.actionsReportPath,
+      scanContactsReportPath: this.scanContactsReportPath,
+      backupReportPath: this.backupReportPath,
+      projectsUpdatesReportPath: this.projectsUpdatesReportPath,
     });
   }
 
@@ -185,23 +200,66 @@ export class EventFileService {
       `Fetching actions report from: ${this.actionsReportPath}`
     );
 
-    try {
-      await fs.access(this.actionsReportPath);
-    } catch {
-      this.logger.warn(
-        `Actions report file not found at: ${this.actionsReportPath}. Skipping.`
-      );
+    const reportContent = await this.extractForBotSection(
+      this.actionsReportPath
+    );
+    if (!reportContent) {
       return '';
     }
 
-    const content = await fs.readFile(this.actionsReportPath, 'utf-8');
+    return `\nTASKS:\n${reportContent}`;
+  }
+
+  /**
+   * Reads additional report files and extracts the #FOR-BOT# section for each.
+   */
+  public async getTasksDetailsReport(): Promise<string> {
+    this.logger.debug('Fetching tasks details reports');
+
+    const reports = [
+      { path: this.scanContactsReportPath, name: 'SCAN_CONTACTS_REPORT.txt' },
+      { path: this.backupReportPath, name: 'BACKUP_REPORT.txt' },
+      {
+        path: this.projectsUpdatesReportPath,
+        name: 'PROJECTS_UPDATES_REPORT.txt',
+      },
+    ];
+
+    const sections: string[] = [];
+
+    for (const report of reports) {
+      const content = await this.extractForBotSection(report.path);
+      if (content) {
+        sections.push(`\n${report.name}\n${content}`);
+      }
+    }
+
+    if (sections.length === 0) {
+      return '';
+    }
+
+    return `\nTASKS-DETAILS:\n${sections.join('\n')}`;
+  }
+
+  /**
+   * Helper to extract the #FOR-BOT# section from a file.
+   */
+  private async extractForBotSection(filePath: string): Promise<string> {
+    try {
+      await fs.access(filePath);
+    } catch {
+      this.logger.warn(`File not found at: ${filePath}. Skipping.`);
+      return '';
+    }
+
+    const content = await fs.readFile(filePath, 'utf-8');
     const lines = content.split(/\r?\n/);
 
     const separator = '#FOR-BOT#';
     const separatorIndex = lines.lastIndexOf(separator);
 
     if (separatorIndex === -1) {
-      this.logger.warn(`Separator "${separator}" not found in actions report.`);
+      this.logger.debug(`Separator "${separator}" not found in: ${filePath}`);
       return '';
     }
 
@@ -229,15 +287,12 @@ export class EventFileService {
       for (const [longName, shortName] of Object.entries(
         this.BOT_NAME_MAPPING
       )) {
-        // Use regex with word boundary to avoid partial replacements if names are similar
-        // but since these are specific names, simple replacement or boundary-checked replacement is better.
-        // We'll replace all occurrences of the long name in the line.
         updatedLine = updatedLine.split(longName).join(shortName);
       }
       return updatedLine;
     });
 
-    return `\nTASKS:\n${processedLines.join('\n')}`;
+    return processedLines.join('\n');
   }
 
   /**

@@ -19,7 +19,13 @@ describe('EventFileService', () => {
       error: vi.fn(),
     };
     service = new EventFileService(logger);
-    service.init(folderPath, 'test-actions-report.txt');
+    service.init(
+      folderPath,
+      'test-actions-report.txt',
+      'test-scan-contacts.txt',
+      'test-backup.txt',
+      'test-projects-updates.txt'
+    );
     vi.clearAllMocks();
   });
 
@@ -80,20 +86,45 @@ Series & Movies = OK
 
     expect(result).toBe('');
     expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Actions report file not found')
+      expect.stringContaining('File not found')
     );
   });
 
-  it('should return empty string if separator not found in actions report', async () => {
+  it('should return empty string if separator not found in any report', async () => {
     vi.mocked(fs.access).mockResolvedValue(undefined);
     vi.mocked(fs.readFile).mockResolvedValue('No separator here');
 
     const result = await service.getActionsReport();
-
     expect(result).toBe('');
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Separator "#FOR-BOT#" not found')
-    );
+
+    const detailsResult = await service.getTasksDetailsReport();
+    expect(detailsResult).toBe('');
+  });
+
+  it('should extract tasks details report successfully', async () => {
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockImplementation((filePath) => {
+      if (typeof filePath !== 'string') return Promise.resolve('');
+      if (filePath.includes('test-scan-contacts.txt')) {
+        return Promise.resolve('Header\n#FOR-BOT#\nScan OK');
+      }
+      if (filePath.includes('test-backup.txt')) {
+        return Promise.resolve('Header\n#FOR-BOT#\nBackup OK');
+      }
+      if (filePath.includes('test-projects-updates.txt')) {
+        return Promise.resolve('No separator');
+      }
+      return Promise.resolve('');
+    });
+
+    const result = await service.getTasksDetailsReport();
+
+    expect(result).toContain('TASKS-DETAILS:');
+    expect(result).toContain('SCAN_CONTACTS_REPORT.txt');
+    expect(result).toContain('Scan OK');
+    expect(result).toContain('BACKUP_REPORT.txt');
+    expect(result).toContain('Backup OK');
+    expect(result).not.toContain('PROJECTS_UPDATES_REPORT.txt');
   });
 
   it('should extract events for today successfully', async () => {
