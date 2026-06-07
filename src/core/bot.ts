@@ -93,9 +93,9 @@ export class DailyEventsBot {
       let prefix = '';
       if (sentRecords.length === 0) {
         this.logger.info(
-          `${EMOJIS.STATUS.INFO} No messages sent today. Preparing MORNING message.`
+          `${EMOJIS.STATUS.INFO} No messages sent today. Preparing NIGHT message.`
         );
-        prefix = '@MORNING@\n';
+        prefix = '@NIGHT@\n';
       } else if (sentRecords.length === 1) {
         const lastSent = sentRecords[0].timestamp;
         const now = Date.now();

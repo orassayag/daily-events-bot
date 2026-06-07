@@ -73,7 +73,7 @@ describe('DailyEventsBot', () => {
     expect(telegramService.validateChat).toHaveBeenCalledWith('test-target');
     expect(eventFileService.getEventsForToday).toHaveBeenCalled();
     expect(telegramService.sendMessage).toHaveBeenCalledWith(
-      expect.stringContaining('@MORNING@\nEvents text')
+      expect.stringContaining('@NIGHT@\nEvents text')
     );
     expect(databaseService.markDateAsSent).toHaveBeenCalled();
   });
