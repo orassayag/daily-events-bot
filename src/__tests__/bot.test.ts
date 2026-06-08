@@ -5,6 +5,7 @@ import {
   EventFileService,
   DatabaseService,
 } from '../services/index.js';
+import { DateUtils } from '../utils/index.js';
 import 'reflect-metadata';
 
 describe('DailyEventsBot', () => {
@@ -59,10 +60,11 @@ describe('DailyEventsBot', () => {
     );
   });
 
-  it('should run the bot successfully', async () => {
+  it('should run the bot successfully with @DAY@ if closer to morning', async () => {
     vi.mocked(eventFileService.getEventsForToday).mockResolvedValue(
       'Events text'
     );
+    vi.spyOn(DateUtils, 'isCloserToNight').mockReturnValue(false);
 
     const result = await bot.run();
 
@@ -73,9 +75,23 @@ describe('DailyEventsBot', () => {
     expect(telegramService.validateChat).toHaveBeenCalledWith('test-target');
     expect(eventFileService.getEventsForToday).toHaveBeenCalled();
     expect(telegramService.sendMessage).toHaveBeenCalledWith(
-      expect.stringContaining('@NIGHT@\nEvents text')
+      expect.stringContaining('@DAY@\nEvents text')
     );
     expect(databaseService.markDateAsSent).toHaveBeenCalled();
+  });
+
+  it('should run the bot successfully with @NIGHT@ if closer to night', async () => {
+    vi.mocked(eventFileService.getEventsForToday).mockResolvedValue(
+      'Events text'
+    );
+    vi.spyOn(DateUtils, 'isCloserToNight').mockReturnValue(true);
+
+    const result = await bot.run();
+
+    expect(result).toBe(true);
+    expect(telegramService.sendMessage).toHaveBeenCalledWith(
+      expect.stringContaining('@NIGHT@\nEvents text')
+    );
   });
 
   it('should return false if message for today was already sent twice', async () => {
@@ -101,7 +117,7 @@ describe('DailyEventsBot', () => {
     expect(telegramService.sendMessage).not.toHaveBeenCalled();
   });
 
-  it('should send EVENING message if one sent and > 9 hours passed', async () => {
+  it('should send NIGHT message if one sent and > 9 hours passed', async () => {
     vi.mocked(databaseService.getSentRecords).mockResolvedValue([
       { date: '2026-05-04', timestamp: Date.now() - 10 * 3600 * 1000 },
     ]);
@@ -113,7 +129,7 @@ describe('DailyEventsBot', () => {
 
     expect(result).toBe(true);
     expect(telegramService.sendMessage).toHaveBeenCalledWith(
-      expect.stringContaining('@EVENING@\nEvents text')
+      expect.stringContaining('@NIGHT@\nEvents text')
     );
   });
 

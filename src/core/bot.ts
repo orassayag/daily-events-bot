@@ -92,10 +92,17 @@ export class DailyEventsBot {
 
       let prefix = '';
       if (sentRecords.length === 0) {
-        this.logger.info(
-          `${EMOJIS.STATUS.INFO} No messages sent today. Preparing NIGHT message.`
-        );
-        prefix = '@NIGHT@\n';
+        if (DateUtils.isCloserToNight()) {
+          this.logger.info(
+            `${EMOJIS.STATUS.INFO} No messages sent today. Current time is closer to NIGHT. Preparing NIGHT message.`
+          );
+          prefix = '@NIGHT@\n';
+        } else {
+          this.logger.info(
+            `${EMOJIS.STATUS.INFO} No messages sent today. Current time is closer to DAY. Preparing DAY message.`
+          );
+          prefix = '@DAY@\n';
+        }
       } else if (sentRecords.length === 1) {
         const lastSent = sentRecords[0].timestamp;
         const now = Date.now();
@@ -109,9 +116,9 @@ export class DailyEventsBot {
         }
 
         this.logger.info(
-          `${EMOJIS.STATUS.INFO} One message sent today and >9 hours passed. Preparing EVENING message.`
+          `${EMOJIS.STATUS.INFO} One message sent today and >9 hours passed. Preparing NIGHT message.`
         );
-        prefix = '@EVENING@\n';
+        prefix = '@NIGHT@\n';
       } else {
         this.logger.info(
           `${EMOJIS.STATUS.SUCCESS} Validation: Maximum 2 messages for today (${dateInfo.formattedDate}) already sent. Nothing to do.`
