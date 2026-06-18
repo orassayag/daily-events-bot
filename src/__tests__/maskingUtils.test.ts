@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { maskCreditCards } from '../utils/maskingUtils.js';
+import { maskCreditCards } from '../utils/index.js';
 
 describe('maskingUtils', () => {
   describe('maskCreditCards', () => {

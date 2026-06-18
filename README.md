@@ -2,40 +2,42 @@
 
 Automated scheduler script that compiles your daily tasks, holidays, birthdays, anniversaries, memorial dates, service expirations, and routine activities, then sends them via a Telegram bot to a chat, triggering mobile notifications that help you stay organized, consistent, and always on track.
 
-Built to streamline personal organization, this Node.js application reads event data from local text files, validates the current date against a local database to prevent duplicate notifications, and communicates directly with the Telegram Bot API.
+Built in May 2026 to streamline personal organization, this Node.js application reads event data from local text files, validates the current date against a local database to prevent duplicate notifications, and communicates directly with the Telegram Bot API.
 
 ## Features
 
+- 📅 Automated daily scheduling (tasks, holidays, birthdays, anniversaries, memorial dates, service expirations, routine activities)
+- 🤖 Telegram integration with mobile notifications
+- 🌍 Jerusalem timezone support with Hebrew day names
+- 🗄️ Local JSON database to prevent duplicate notifications
+- 💉 Clean, testable architecture with InversifyJS dependency injection
+- 📝 Flexible event parsing from yearly text files
+- ✅ Comprehensive validation (bot credentials, target chat, event data)
+- 🧪 Full TypeScript with strict type checking and Vitest unit tests
+- 🔄 Watch mode for hot-reloading during development
+- 📊 Clear structured logging for easy troubleshooting
+
 ### Core Capabilities
 
-- **Automated Daily Scheduling**: Fetches events for the current day automatically.
-- **Telegram Integration**: Sends formatted event lists directly to a specified Telegram chat.
-- **Jerusalem Timezone Support**: Specifically designed to operate on Jerusalem time with Hebrew day name support.
-- **Local JSON Database**: Tracks sent notifications to ensure each day's events are only sent once.
-- **Flexible Event Parsing**: Reads events from yearly text files with a simple, readable format.
+- **Automated Daily Scheduling**: Fetches events for the current day automatically
+- **Telegram Integration**: Sends formatted event lists directly to a specified Telegram chat
+- **Jerusalem Timezone Support**: Specifically designed to operate on Jerusalem time with Hebrew day name support
+- **Local JSON Database**: Tracks sent notifications to ensure each day's events are only sent once
+- **Flexible Event Parsing**: Reads events from yearly text files with a simple, readable format
 
 ### Technical Excellence
 
-- **Dependency Injection**: Clean, testable service architecture with InversifyJS.
-- **Type Safety**: Full TypeScript with strict type checking.
-- **Comprehensive Testing**: Unit tests for core services and utilities using Vitest.
-- **Modular Architecture**: Separated concerns between orchestration, data retrieval, and messaging.
+- **Dependency Injection**: Clean, testable service architecture with InversifyJS
+- **Type Safety**: Full TypeScript with strict type checking
+- **Comprehensive Testing**: Unit tests for core services and utilities using Vitest
+- **Modular Architecture**: Separated concerns between orchestration, data retrieval, and messaging
 
 ### Developer Experience
 
-- **Environment Management**: Simple `.env` based configuration.
-- **Watch Mode**: `pnpm dev` for hot-reloading during development.
-- **Clear Logging**: Step-by-step console output for easy troubleshooting.
-- **Modern Tooling**: Powered by Vitest, ESLint, and Prettier.
-
-- � **Automated Daily Scheduling**: Fetches events for the current day automatically.
-- 🤖 **Telegram Integration**: Sends formatted event lists directly to a specified Telegram chat.
-- � **Jerusalem Timezone Support**: Specifically designed to operate on Jerusalem time with Hebrew day name support.
-- 🗄️ **Local JSON Database**: Tracks sent notifications to ensure each day's events are only sent once.
-- 💉 **Dependency Injection**: Built with InversifyJS for a clean, modular, and testable architecture.
-- � **Flexible Event Parsing**: Reads events from yearly text files with a simple, readable format.
-- �️ **Validation Logic**: Validates both the bot's credentials and the target chat before sending messages.
-- � **Comprehensive Testing**: Includes unit tests for core services and utilities using Vitest.
+- **Environment Management**: Simple `.env` based configuration
+- **Watch Mode**: `pnpm dev` for hot-reloading during development
+- **Clear Logging**: Step-by-step console output for easy troubleshooting
+- **Modern Tooling**: Powered by Vitest, ESLint, and Prettier
 
 ## Getting Started
 
@@ -135,26 +137,6 @@ Environment variables in `.env`:
 - `pnpm lint`: Runs ESLint to check for code quality.
 - `pnpm format`: Formats the code using Prettier.
 
-## Project Structure
-
-```
-daily-events-bot/
-├── db/                   # Local database storage
-│   └── days.json         # Tracks sent notification dates
-├── src/
-│   ├── di/               # Dependency Injection configuration
-│   ├── services/         # Core business logic (Telegram, File, Database)
-│   ├── settings/         # Application settings and paths
-│   ├── types/            # TypeScript type definitions
-│   ├── utils/            # Utility functions (Date formatting)
-│   ├── bot.ts            # Main bot orchestration logic
-│   └── index.ts          # Entry point
-├── src/__tests__/        # Unit tests
-├── .env                  # Environment variables (private)
-├── package.json          # Project configuration and dependencies
-└── tsconfig.json         # TypeScript configuration
-```
-
 ## Directory Structure
 
 ```
@@ -253,15 +235,6 @@ graph TD
 5. **Messaging**: `TelegramService` interacts with the Telegram Bot API.
 6. **Data Retrieval**: `EventFileService` parses the raw text files for daily content.
 
-## Email Validation Features
-
-While this bot does not perform email validation, it implements strict **Event Data Validation**:
-
-- **Date Matching**: Ensures events are only fetched for the exact current date.
-- **Section Parsing**: Identifies the start and end of daily event sections using separators like `===` or `###`.
-- **Format Integrity**: Validates that the event file exists and follows the expected yearly naming convention.
-- **Duplicate Prevention**: Cross-references with the local database to avoid spamming the chat.
-
 ## Console Status Example
 
 ```
@@ -303,14 +276,6 @@ Contributions are welcome! Please follow the guidelines in `CONTRIBUTING.md`.
 3. Ensure all tests pass.
 4. Submit a pull request.
 
-## Built With
-
-- [Node.js](https://nodejs.org/) - JavaScript runtime
-- [TypeScript](https://www.typescriptlang.org/) - Typed superset of JavaScript
-- [InversifyJS](https://inversify.io/) - Powerful and lightweight IoC container
-- [Vitest](https://vitest.dev/) - Next generation testing framework
-- [Telegram Bot API](https://core.telegram.org/bots/api) - For sending notifications
-
 ## Author
 
 - **Or Assayag** - _Initial work_ - [orassayag](https://github.com/orassayag)
@@ -328,4 +293,4 @@ Contributions are welcome! Please follow the guidelines in `CONTRIBUTING.md`.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This application has an MIT license - see the [LICENSE](LICENSE) file for details.

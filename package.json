@@ -70,6 +70,7 @@
     "dailyEventsBot.bat",
     "eslint.config.mjs",
     "INSTRUCTIONS.md",
+    "knip.json",
     "LICENSE",
     "package.json",
     "pnpm-lock.yaml",
@@ -81,16 +82,12 @@
     "vitest.config.ts"
   ],
   "scripts": {
-    "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "dry": "cross-env DRY_MODE=true tsx src/index.ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "lint": "eslint \"src/**/*.ts\"",
     "start": "tsx src/index.ts",
-    "start:live": "cross-env DRY_MODE=false tsx src/index.ts",
-    "start:no-cache": "tsx src/index.ts --no-cache",
-    "sync": "tsx src/index.ts --auto",
     "test": "cross-env NODE_OPTIONS='--no-warnings' vitest run --coverage",
     "test:no-coverage": "cross-env NODE_OPTIONS='--no-warnings' vitest run",
     "test:ui": "vitest --ui",
@@ -98,7 +95,7 @@
   },
   "dependencies": {
     "dotenv": "^17.4.2",
-    "inversify": "^8.1.0",
+    "inversify": "^8.1.1",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
