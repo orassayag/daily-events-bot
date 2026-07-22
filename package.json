@@ -95,7 +95,7 @@
   },
   "dependencies": {
     "dotenv": "^17.4.2",
-    "inversify": "^8.2.1",
+    "inversify": "^8.2.2",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
