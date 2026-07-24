@@ -16,3 +16,4 @@ minimumReleaseAgeExclude:
   - '@inversifyjs/core@11.0.0 || 15.0.0 || 15.0.1'
   - inversify@8.1.1 || 8.2.2 || 8.2.3
   - prettier@3.9.6
+  - eslint@10.8.0
