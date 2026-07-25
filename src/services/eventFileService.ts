@@ -4,6 +4,16 @@ import path from 'path';
 import { DateInfo, TYPES } from '../types/index.js';
 import { Logger } from '../logging/index.js';
 import { EMOJIS } from '../constants/index.js';
+import { DateUtils } from '../utils/index.js';
+
+const NEXT_WEEK_DAYS = 7;
+
+/**
+ * A day-block header in the main section: a date immediately followed by a single
+ * weekday token ending in a period (e.g. `04/05/2026 שני.`). These are the date-item
+ * titles the next-week scanner must ignore.
+ */
+const DATE_ITEM_TITLE_PATTERN = /^\d{1,2}\/\d{1,2}\/\d{4}\s+\S+\./;
 
 @injectable()
 export class EventFileService {
@@ -57,39 +67,7 @@ export class EventFileService {
     const { fullDateWithDay, year, formattedDate } = dateInfo;
     this.logger.debug(`Fetching events for: ${fullDateWithDay}`);
 
-    // 5.1 Check folder existence
-    try {
-      await fs.access(this.folderPath);
-    } catch {
-      const error = new Error(`Folder not found: ${this.folderPath}`);
-      this.logger.error('Events folder access failed', error);
-      throw error;
-    }
-
-    // 6. Search for the file
-    this.logger.debug(`Searching for events file in: ${this.folderPath}`);
-    const files = await fs.readdir(this.folderPath);
-    const pattern = `event-dates-${year}.txt`;
-    const matchingFiles = files.filter((f) => f === pattern);
-
-    if (matchingFiles.length === 0) {
-      const error = new Error(`No file found matching pattern: ${pattern}`);
-      this.logger.error('Events file not found', error);
-      throw error;
-    }
-    if (matchingFiles.length > 1) {
-      const error = new Error(
-        `More than one file found matching pattern: ${pattern}`
-      );
-      this.logger.error('Multiple event files found', error);
-      throw error;
-    }
-
-    // 7. Read the file
-    const filePath = path.join(this.folderPath, matchingFiles[0]);
-    this.logger.debug(`Reading events from: ${filePath}`);
-    const content = await fs.readFile(filePath, 'utf-8');
-    const lines = content.split(/\r?\n/);
+    const lines = await this.readEventFileLines(year);
 
     // 8. Find #EVENTS# separator and scan top section
     const eventsSeparatorIndex = lines.findIndex((line) =>
@@ -190,6 +168,147 @@ export class EventFileService {
       `${EMOJIS.DATA.FILE} Successfully extracted ${resultLines.length} lines of events`
     );
     return resultLines.join('\n');
+  }
+
+  /**
+   * Scans the whole events document for any date that falls within the next 7 days
+   * (Jerusalem time) and returns the referencing lines under a "NEXT WEEKS EVENTS"
+   * section. Date-item title lines (the `dd/MM/yyyy <day>.` day-block headers in the
+   * main section) are intentionally excluded — only dates scraped from inside a date
+   * item's content or from outside the date items (the top section) are reported.
+   */
+  public async getNextWeekEvents(dateInfo: DateInfo): Promise<string> {
+    const { year } = dateInfo;
+    this.logger.debug('Scanning document for next-week events');
+
+    const lines = await this.readEventFileLines(year);
+
+    const upcomingDates = DateUtils.getUpcomingFormattedDates(NEXT_WEEK_DAYS);
+    const upcomingDateSet = new Set(upcomingDates);
+
+    const eventsSeparatorIndex = lines.findIndex((line) =>
+      line.trim().includes('#EVENTS#')
+    );
+
+    const matchesByDate = new Map<string, string[]>();
+
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (trimmed === '' || trimmed.includes('#EVENTS#')) {
+        continue;
+      }
+      if (trimmed.startsWith('===') || trimmed.startsWith('###')) {
+        continue;
+      }
+
+      const inMainSection =
+        eventsSeparatorIndex === -1 || i > eventsSeparatorIndex;
+      if (inMainSection && DATE_ITEM_TITLE_PATTERN.test(trimmed)) {
+        continue;
+      }
+
+      for (const canonicalDate of this.extractCanonicalDates(trimmed)) {
+        if (!upcomingDateSet.has(canonicalDate)) {
+          continue;
+        }
+        const existing = matchesByDate.get(canonicalDate) ?? [];
+        if (!existing.includes(trimmed)) {
+          existing.push(trimmed);
+        }
+        matchesByDate.set(canonicalDate, existing);
+      }
+    }
+
+    const reportLines: string[] = [];
+    const emittedLines = new Set<string>();
+    for (const canonicalDate of upcomingDates) {
+      const dateLines = matchesByDate.get(canonicalDate);
+      if (!dateLines) {
+        continue;
+      }
+      for (const dateLine of dateLines) {
+        if (!emittedLines.has(dateLine)) {
+          emittedLines.add(dateLine);
+          reportLines.push(dateLine);
+        }
+      }
+    }
+
+    if (reportLines.length === 0) {
+      this.logger.debug('No next-week events found');
+      return '';
+    }
+
+    this.logger.info(
+      `${EMOJIS.DATA.DATE} Found ${reportLines.length} next-week event line(s)`
+    );
+    return `\nNEXT WEEKS EVENTS:\n${reportLines.join('\n')}`;
+  }
+
+  /**
+   * Resolves the single `event-dates-<year>.txt` file in the daily folder and returns
+   * its lines. Throws if the folder is missing, or no/multiple matching files exist.
+   */
+  private async readEventFileLines(year: string): Promise<string[]> {
+    try {
+      await fs.access(this.folderPath);
+    } catch {
+      const error = new Error(`Folder not found: ${this.folderPath}`);
+      this.logger.error('Events folder access failed', error);
+      throw error;
+    }
+
+    this.logger.debug(`Searching for events file in: ${this.folderPath}`);
+    const files = await fs.readdir(this.folderPath);
+    const pattern = `event-dates-${year}.txt`;
+    const matchingFiles = files.filter((f) => f === pattern);
+
+    if (matchingFiles.length === 0) {
+      const error = new Error(`No file found matching pattern: ${pattern}`);
+      this.logger.error('Events file not found', error);
+      throw error;
+    }
+    if (matchingFiles.length > 1) {
+      const error = new Error(
+        `More than one file found matching pattern: ${pattern}`
+      );
+      this.logger.error('Multiple event files found', error);
+      throw error;
+    }
+
+    const filePath = path.join(this.folderPath, matchingFiles[0]);
+    this.logger.debug(`Reading events from: ${filePath}`);
+    const content = await fs.readFile(filePath, 'utf-8');
+    return content.split(/\r?\n/);
+  }
+
+  /**
+   * Extracts every `dd/MM/yyyy` (or `d/M/yy`) date token from a line and returns each as
+   * a canonical zero-padded `dd/MM/yyyy` string. Tokens embedded in a longer number are
+   * ignored via the digit/slash boundaries, and out-of-range day/month values are dropped.
+   */
+  private extractCanonicalDates(line: string): string[] {
+    const rawDates = line.match(
+      /(?<![\d/])\d{1,2}\/\d{1,2}\/\d{2,4}(?![\d/])/g
+    );
+    if (!rawDates) {
+      return [];
+    }
+
+    const canonicalDates: string[] = [];
+    for (const rawDate of rawDates) {
+      const [rawDay, rawMonth, rawYear] = rawDate.split('/');
+      const day = parseInt(rawDay, 10);
+      const month = parseInt(rawMonth, 10);
+      if (day < 1 || day > 31 || month < 1 || month > 12) {
+        continue;
+      }
+      const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+      canonicalDates.push(
+        `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`
+      );
+    }
+    return canonicalDates;
   }
 
   /**

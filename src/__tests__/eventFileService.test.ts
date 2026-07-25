@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventFileService } from '../services/index.js';
 import fs from 'fs/promises';
 import 'reflect-metadata';
@@ -244,5 +244,94 @@ Dummy prefix 02/02/24
         year: '2024',
       } as any)
     ).rejects.toThrow('Found more than 1 match');
+  });
+
+  describe('getNextWeekEvents', () => {
+    const dateInfo = {
+      formattedDate: '08/06/2026',
+      fullDateWithDay: '08/06/2026 Monday.',
+      year: '2026',
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-06-08T05:00:00Z')); // 08/06/2026 Jerusalem
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should report inner-item and outside-item dates, ignoring date-item titles', async () => {
+      const mockContent = [
+        '15/06/2026 Birthday of X',
+        '- gift idea',
+        "Some line 08/06/2026 today's date",
+        '20/06/2026 Holiday',
+        '',
+        '#EVENTS#',
+        '',
+        '08/06/2026 Monday.',
+        '-Pay bill on 10/06/2026',
+        '===',
+        '09/06/2026 Tuesday.',
+        '-Regular task',
+        '===',
+        '12/06/2026 Friday.',
+        '-Anniversary 14/06/2026 with note',
+        '===',
+      ].join('\n');
+
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue(['event-dates-2026.txt'] as any);
+      vi.mocked(fs.readFile).mockResolvedValue(mockContent);
+
+      const result = await service.getNextWeekEvents(dateInfo as any);
+      const lines = result.split('\n');
+
+      expect(lines[0]).toBe('');
+      expect(lines[1]).toBe('NEXT WEEKS EVENTS:');
+      // Chronological by referenced date: 10th, 14th, 15th.
+      expect(lines[2]).toBe('-Pay bill on 10/06/2026');
+      expect(lines[3]).toBe('-Anniversary 14/06/2026 with note');
+      expect(lines[4]).toBe('15/06/2026 Birthday of X');
+
+      // Excluded: the 09/06 date-item TITLE, today (08/06), and out-of-range (20/06).
+      expect(result).not.toContain('09/06/2026 Tuesday.');
+      expect(result).not.toContain("today's date");
+      expect(result).not.toContain('20/06/2026 Holiday');
+    });
+
+    it('should not match a date embedded inside a longer number', async () => {
+      const mockContent = [
+        '#EVENTS#',
+        '08/06/2026 Monday.',
+        '-Order ref 1109/06/20260 shipped',
+        '===',
+      ].join('\n');
+
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue(['event-dates-2026.txt'] as any);
+      vi.mocked(fs.readFile).mockResolvedValue(mockContent);
+
+      const result = await service.getNextWeekEvents(dateInfo as any);
+      expect(result).toBe('');
+    });
+
+    it('should return empty string when no upcoming dates are present', async () => {
+      const mockContent = [
+        '#EVENTS#',
+        '08/06/2026 Monday.',
+        '-Nothing upcoming here',
+        '===',
+      ].join('\n');
+
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue(['event-dates-2026.txt'] as any);
+      vi.mocked(fs.readFile).mockResolvedValue(mockContent);
+
+      const result = await service.getNextWeekEvents(dateInfo as any);
+      expect(result).toBe('');
+    });
   });
 });

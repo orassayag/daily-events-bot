@@ -33,6 +33,37 @@ export class DateUtils {
   }
 
   /**
+   * Returns the `dd/MM/yyyy` dates for the next `count` calendar days (Jerusalem time),
+   * starting from tomorrow. Uses UTC arithmetic on the Jerusalem calendar date so the
+   * day counter is DST-safe (it advances whole calendar days, never wall-clock hours).
+   */
+  public static getUpcomingFormattedDates(count: number): string[] {
+    const now = new Date();
+    const jerusalemYearMonthDay = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Jerusalem',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(now); // "2026-07-25"
+
+    const [year, month, day] = jerusalemYearMonthDay
+      .split('-')
+      .map((part) => parseInt(part, 10));
+    const baseUtcMs = Date.UTC(year, month - 1, day);
+
+    const dayInMs = 24 * 60 * 60 * 1000;
+    const upcomingDates: string[] = [];
+    for (let offset = 1; offset <= count; offset++) {
+      const date = new Date(baseUtcMs + offset * dayInMs);
+      const dd = String(date.getUTCDate()).padStart(2, '0');
+      const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const yyyy = String(date.getUTCFullYear());
+      upcomingDates.push(`${dd}/${mm}/${yyyy}`);
+    }
+    return upcomingDates;
+  }
+
+  /**
    * Checks if the current time in Jerusalem is closer to the morning (06:30) or the night (18:00).
    * @returns {boolean} True if closer to 18:00, false if closer to 06:30.
    */

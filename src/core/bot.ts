@@ -69,10 +69,13 @@ export class DailyEventsBot {
         const actionsReport = await this.eventFileService.getActionsReport();
         const tasksDetailsReport =
           await this.eventFileService.getTasksDetailsReport();
+        const nextWeekEvents =
+          await this.eventFileService.getNextWeekEvents(dateInfo);
 
         let fullMessage = eventsText;
         if (actionsReport) fullMessage += `\n${actionsReport}`;
         if (tasksDetailsReport) fullMessage += `\n${tasksDetailsReport}`;
+        if (nextWeekEvents) fullMessage += `\n${nextWeekEvents}`;
 
         console.log(`\n${fullMessage}\n`);
         return true;
@@ -144,10 +147,13 @@ export class DailyEventsBot {
       const actionsReport = await this.eventFileService.getActionsReport();
       const tasksDetailsReport =
         await this.eventFileService.getTasksDetailsReport();
+      const nextWeekEvents =
+        await this.eventFileService.getNextWeekEvents(dateInfo);
 
       let rawMessage = eventsText;
       if (actionsReport) rawMessage += `\n${actionsReport}`;
       if (tasksDetailsReport) rawMessage += `\n${tasksDetailsReport}`;
+      if (nextWeekEvents) rawMessage += `\n${nextWeekEvents}`;
 
       const fullMessage = `${prefix}${rawMessage}`;
 
