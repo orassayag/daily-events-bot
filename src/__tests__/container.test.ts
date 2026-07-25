@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { container } from '../di/index.js';
 import { TYPES } from '../types/index.js';
 import { Logger } from '../logging/index.js';
@@ -10,6 +10,15 @@ import {
 import { DailyEventsBot } from '../core/index.js';
 
 describe('DI Container', () => {
+  beforeAll(() => {
+    // DailyEventsBot validates these in its constructor; provide dummies so the
+    // container can resolve it without a real .env present.
+    process.env.BOT_USERNAME ??= 'test-bot';
+    process.env.TARGET_USERNAME ??= 'test-target';
+    process.env.TOKEN ??= 'test-token';
+    process.env.CHAT_ID ??= 'test-chat-id';
+  });
+
   it('should have Logger bound and be a singleton', () => {
     const instance1 = container.get<Logger>(TYPES.Logger);
     const instance2 = container.get<Logger>(TYPES.Logger);
