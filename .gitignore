@@ -31,3 +31,6 @@ coverage
 # Others:
 # Distribution
 db
+
+# Plan drafts (workflow)
+docs/pre-plans/
