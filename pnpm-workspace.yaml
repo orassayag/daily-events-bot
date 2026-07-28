@@ -17,3 +17,4 @@ minimumReleaseAgeExclude:
   - inversify@8.1.1 || 8.2.2 || 8.2.3
   - prettier@3.9.6
   - eslint@10.8.0
+  - '@types/node@26.1.2'
