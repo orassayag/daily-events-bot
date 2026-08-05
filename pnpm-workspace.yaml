@@ -18,5 +18,5 @@ minimumReleaseAgeExclude:
   - prettier@3.9.6
   - eslint@10.8.0
   - '@types/node@26.1.2'
-  - '@rolldown/binding-win32-x64-msvc@1.2.1 || 1.2.2'
-  - tsx@4.23.4 || 4.23.5 || 4.23.6
+  - '@rolldown/binding-win32-x64-msvc@1.2.1 || 1.2.2 || 1.2.3'
+  - tsx@4.23.4 || 4.23.5 || 4.23.6 || 4.23.8
