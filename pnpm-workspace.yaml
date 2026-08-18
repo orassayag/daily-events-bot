@@ -20,3 +20,13 @@ minimumReleaseAgeExclude:
   - '@types/node@26.1.2 || 26.2.0'
   - '@rolldown/binding-win32-x64-msvc@1.2.1 || 1.2.2 || 1.2.3 || 1.2.4'
   - tsx@4.23.4 || 4.23.5 || 4.23.6 || 4.23.8 || 4.23.9 || 4.23.11 || 4.23.12
+  - '@vitest/coverage-istanbul@4.1.11'
+  - '@vitest/expect@4.1.11'
+  - '@vitest/mocker@4.1.11'
+  - '@vitest/pretty-format@4.1.11'
+  - '@vitest/runner@4.1.11'
+  - '@vitest/snapshot@4.1.11'
+  - '@vitest/spy@4.1.11'
+  - '@vitest/ui@4.1.11'
+  - '@vitest/utils@4.1.11'
+  - vitest@4.1.11
